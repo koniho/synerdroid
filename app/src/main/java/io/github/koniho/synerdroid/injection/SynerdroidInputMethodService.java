@@ -83,7 +83,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
                 alternateSymbols = !alternateSymbols;
                 buildKeyboard();
             }, true));
-            addCharacters(symbolsLast, alternateSymbols ? "[]<>\u00a7\u00a9\u00ae" : "*\"':;!?");
+            addCharacters(symbolsLast, alternateSymbols ? "%\u00a9\u00ae\u2122\u2713[]" : "*\"':;!?");
             symbolsLast.addView(key("\u232b", 1.55f, view -> deleteBackward(), true));
             keyboardView.addView(symbolsLast);
         } else {
@@ -105,7 +105,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         }, true));
         bottom.addView(key(",", 1f, view -> commit(","), false));
         if (symbols) {
-            bottom.addView(key(alternateSymbols ? "2/2" : "1/2", 1f, view -> {
+            bottom.addView(key("1 2\n3 4", 1f, view -> {
                 alternateSymbols = !alternateSymbols;
                 buildKeyboard();
             }, true));
@@ -240,7 +240,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private Button key(String label, float weight, View.OnClickListener listener, boolean special) {
         Button button = new Button(this);
         button.setText(label);
-        button.setTextSize(label.length() > 2 ? 15 : 22);
+        button.setTextSize(label.contains("\n") ? 12 : "space".equals(label) ? 15 : label.length() > 2 ? 18 : 22);
         button.setTextColor(Color.rgb(225, 233, 238));
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
