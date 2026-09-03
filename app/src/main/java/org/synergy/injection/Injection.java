@@ -7,6 +7,7 @@ public final class Injection {
     private static int pressX;
     private static int pressY;
     private static int pressedButton = -1;
+    private static boolean screenFocused;
 
     private Injection() { }
 
@@ -20,10 +21,28 @@ public final class Injection {
         pointerX = 0;
         pointerY = 0;
         pressedButton = -1;
+        screenFocused = false;
+        hidePointer();
     }
 
-    public static void stopInjection() { }
-    public static void stop() { }
+    public static void stopInjection() { leaveScreen(); }
+    public static void stop() { leaveScreen(); }
+
+    public static void enterScreen() {
+        screenFocused = true;
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service != null) service.movePointer(pointerX, pointerY);
+    }
+
+    public static void leaveScreen() {
+        screenFocused = false;
+        hidePointer();
+    }
+
+    private static void hidePointer() {
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service != null) service.hidePointer();
+    }
 
     public static void keydown(int key, int mask) {
         SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
@@ -52,7 +71,7 @@ public final class Injection {
         if (service == null) return;
         pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, pointerX + dx));
         pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + dy));
-        service.movePointer(pointerX, pointerY);
+        if (screenFocused) service.movePointer(pointerX, pointerY);
     }
 
     public static void mousedown(int buttonId) {

@@ -54,6 +54,12 @@ public final class SynergyAccessibilityService extends AccessibilityService {
         });
     }
 
+    public void hidePointer() {
+        mainHandler.post(() -> {
+            if (cursorView != null) cursorView.setVisibility(android.view.View.INVISIBLE);
+        });
+    }
+
     private void createCursorOverlay() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         cursorView = new CursorOverlayView(this);

@@ -354,8 +354,7 @@ public class Client implements EventTarget {
     }
     
     public void leave (LeaveMessage leaveMessage) {
-    	// Since I don't know how to hide the cursor, tuck it away out of sight
-    	screen.mouseMove (screen.getShape ().right, screen.getShape ().bottom);
+        screen.leave ();
     }
 
     public void mouseMove (int x, int y) {

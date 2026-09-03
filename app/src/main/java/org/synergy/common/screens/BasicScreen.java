@@ -74,12 +74,14 @@ public class BasicScreen implements ScreenInterface {
 
 	@Override
 	public void enter (int toggleMask) {
+        Injection.enterScreen ();
 		allKeysUp ();
 		
 	}
 	
 	@Override
 	public boolean leave () {
+        Injection.leaveScreen ();
 		allKeysUp ();
 		return true;
 	}
