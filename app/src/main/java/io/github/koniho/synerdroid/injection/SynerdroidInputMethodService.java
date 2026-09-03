@@ -383,10 +383,14 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     private void sendAndroidKey(int keyCode) {
+        sendAndroidKey(keyCode, 0);
+    }
+
+    private void sendAndroidKey(int keyCode, int metaState) {
         InputConnection input = getCurrentInputConnection();
         if (input == null) return;
-        input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-        input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+        input.sendKeyEvent(new KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, metaState));
+        input.sendKeyEvent(new KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState));
     }
 
     private void switchKeyboard() {
@@ -398,7 +402,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    public static boolean sendKey(int key) {
+    public static boolean sendKey(int key, int mask) {
         SynerdroidInputMethodService service = instance;
         if (service == null) return false;
         int androidKey = mapSpecialKey(key);
@@ -407,7 +411,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         if (androidKey == KeyEvent.KEYCODE_DEL) {
             service.queueRemoteDelete();
         } else {
-            service.mainHandler.post(() -> service.dispatchRemoteKey(key, androidKey));
+            service.mainHandler.post(() -> service.dispatchRemoteKey(key, androidKey, mask));
         }
         return true;
     }
@@ -431,20 +435,56 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         if (count > 0) deleteBackward(count);
     }
 
-    private void dispatchRemoteKey(int key, int androidKey) {
+    private void dispatchRemoteKey(int key, int androidKey, int mask) {
         animateRemoteKey(key, androidKey);
         try {
             if (androidKey == KeyEvent.KEYCODE_DEL) {
                 deleteBackward();
             } else if (androidKey != KeyEvent.KEYCODE_UNKNOWN) {
-                sendAndroidKey(androidKey);
+                sendAndroidKey(androidKey, metaState(mask));
             } else {
                 InputConnection input = getCurrentInputConnection();
-                if (input != null) input.commitText(new String(Character.toChars(key)), 1);
+                if (input != null) {
+                    int modifiedKeyCode = androidKeyCodeForCharacter(key);
+                    int meta = metaState(mask);
+                    if (modifiedKeyCode != KeyEvent.KEYCODE_UNKNOWN
+                            && (meta & (KeyEvent.META_CTRL_ON | KeyEvent.META_ALT_ON
+                            | KeyEvent.META_META_ON)) != 0) {
+                        sendAndroidKey(modifiedKeyCode, meta);
+                    } else {
+                        String text = new String(Character.toChars(key));
+                        if ((meta & KeyEvent.META_SHIFT_ON) != 0) text = text.toUpperCase();
+                        input.commitText(text, 1);
+                    }
+                }
             }
         } catch (RuntimeException ignored) {
             // A focused editor may close while queued remote input is draining.
         }
+    }
+
+    private int metaState(int mask) {
+        int meta = 0;
+        if ((mask & 0x0001) != 0) meta |= KeyEvent.META_SHIFT_ON;
+        if ((mask & 0x0002) != 0) meta |= KeyEvent.META_CTRL_ON;
+        if ((mask & 0x0004) != 0) meta |= KeyEvent.META_ALT_ON;
+        if ((mask & 0x0018) != 0) meta |= KeyEvent.META_META_ON;
+        if ((mask & 0x1000) != 0) meta |= KeyEvent.META_CAPS_LOCK_ON;
+        if ((mask & 0x2000) != 0) meta |= KeyEvent.META_NUM_LOCK_ON;
+        return meta;
+    }
+
+    private int androidKeyCodeForCharacter(int key) {
+        if (key >= "a".charAt(0) && key <= "z".charAt(0)) {
+            return KeyEvent.KEYCODE_A + key - "a".charAt(0);
+        }
+        if (key >= "A".charAt(0) && key <= "Z".charAt(0)) {
+            return KeyEvent.KEYCODE_A + key - "A".charAt(0);
+        }
+        if (key >= "0".charAt(0) && key <= "9".charAt(0)) {
+            return KeyEvent.KEYCODE_0 + key - "0".charAt(0);
+        }
+        return KeyEvent.KEYCODE_UNKNOWN;
     }
 
     private void animateRemoteKey(int key, int androidKey) {

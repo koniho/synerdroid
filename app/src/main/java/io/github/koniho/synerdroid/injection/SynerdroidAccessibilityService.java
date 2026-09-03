@@ -135,6 +135,7 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
     }
 
     private void handleKey(int key) {
+        if (Injection.isModifierKey(key)) return;
         if (key == 27 || key == 61211 || key == 65288 || key == 65307 || key == 269025062) {
             performGlobalAction(GLOBAL_ACTION_BACK);
             return;

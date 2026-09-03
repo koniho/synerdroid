@@ -60,6 +60,7 @@ public final class Injection {
 
     public static void keydown(int key, int mask) {
         SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
+        if (isModifierKey(key)) return;
         boolean alt = (mask & 0x0004) != 0;
         boolean shift = (mask & 0x0001) != 0;
         if (service != null && alt && isTab(key)) {
@@ -70,8 +71,12 @@ public final class Injection {
             service.showNotifications();
             return;
         }
-        if (SynerdroidInputMethodService.sendKey(key)) return;
+        if (SynerdroidInputMethodService.sendKey(key, mask)) return;
         if (service != null) service.keyDown(key, mask);
+    }
+
+    public static boolean isModifierKey(int key) {
+        return key >= 0xFFE1 && key <= 0xFFEE || key == 0xFE03;
     }
 
     private static boolean isTab(int key) {
