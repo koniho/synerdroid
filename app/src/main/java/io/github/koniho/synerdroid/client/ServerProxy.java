@@ -418,7 +418,11 @@ public class ServerProxy {
         Log.debug1 (keyRepeatMessage.toString ());
         
         try {
-            client.keyRepeat (keyRepeatMessage.getID (), keyRepeatMessage.getMask(), keyRepeatMessage.getButton());
+            int repeats = Math.max(1, Math.min(64, keyRepeatMessage.getCount()));
+            for (int i = 0; i < repeats; i++) {
+                client.keyRepeat(keyRepeatMessage.getID(), keyRepeatMessage.getMask(),
+                        keyRepeatMessage.getButton());
+            }
         } catch (Exception e) {
         }
 	}

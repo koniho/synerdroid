@@ -1,9 +1,11 @@
 package io.github.koniho.synerdroid;
 // Modified for Synerdroid by Alexander Ho, 2026.
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -43,32 +45,18 @@ public class SynerdroidActivity extends Activity {
     private static final String PROP_POINTER_SPEED = "pointerSpeed";
     private static final String PROP_INVERT_SCROLL = "invertScroll";
 
-    private Thread mainLoopThread;
     private TextView statusView;
     private Button connectButton;
-    private volatile Client currentClient;
-
-    private final class MainLoopThread extends Thread {
-        @Override public void run() {
-            try {
-                Event event = EventQueue.getInstance().getEvent(new Event(), -1.0);
-                while (event.getType() != EventType.QUIT && mainLoopThread == Thread.currentThread()) {
-                    EventQueue.getInstance().dispatchEvent(event);
-                    event = EventQueue.getInstance().getEvent(event, -1.0);
-                }
-            } catch (Throwable error) {
-                appendStatus("Input loop stopped:\n" + stackTrace(error));
-            } finally {
-                mainLoopThread = null;
-                Injection.stop();
-                runOnUiThread(() -> connectButton.setEnabled(true));
-            }
-        }
-    }
+    private volatile boolean connectionActive;
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         CrashReporter.install(this);
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 100);
+        }
         setContentView(R.layout.main);
         statusView = findViewById(R.id.statusTextView);
         migrateLegacyPreferences();
@@ -78,6 +66,15 @@ public class SynerdroidActivity extends Activity {
             statusView.append("\n\nPREVIOUS CRASH\n" + previousCrash);
         }
         connectButton = findViewById(R.id.connectButton);
+        SynerdroidConnectionService.setListener(new SynerdroidConnectionService.Listener() {
+            @Override public void onStatus(String message) { appendStatus(message); }
+            @Override public void onConnectionState(boolean active) {
+                runOnUiThread(() -> {
+                    connectionActive = active;
+                    setConnectionState(active);
+                });
+            }
+        });
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         setTextIfPresent(R.id.clientNameEditText,
@@ -110,7 +107,7 @@ public class SynerdroidActivity extends Activity {
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         findViewById(R.id.keyboardButton).setOnClickListener(view -> configureKeyboard());
         connectButton.setOnClickListener(view -> {
-            if (currentClient == null) connect();
+            if (!connectionActive) connect();
             else disconnect();
         });
         Log.setLogLevel(Log.Level.INFO);
@@ -223,49 +220,26 @@ public class SynerdroidActivity extends Activity {
         appendStatus(tlsEnabled ? "TLS enabled; certificate pin configured." : "Warning: TLS disabled.");
         connectButton.setEnabled(false);
 
-        try {
-            SocketFactoryInterface socketFactory = new TCPSocketFactory(tlsEnabled, fingerprint);
-            NetworkAddress serverAddress = new NetworkAddress(serverHost, port);
-            Injection.startInjection("Synerdroid Accessibility");
-            BasicScreen screen = new BasicScreen();
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            screen.setShape(metrics.widthPixels, metrics.heightPixels);
-
-            Client client = new Client(getApplicationContext(), clientName, serverAddress,
-                    socketFactory, null, screen, this::appendStatus, this::onDisconnected);
-            currentClient = client;
-            setConnectionState(true);
-            new SynergyConnectTask().execute(client);
-
-            if (mainLoopThread == null) {
-                mainLoopThread = new MainLoopThread();
-                mainLoopThread.start();
-            }
-        } catch (Exception error) {
-            appendStatus("Connection failed: " + error.getMessage());
-            connectButton.setEnabled(true);
-        }
+        connectionActive = true;
+        setConnectionState(true);
+        SynerdroidConnectionService.connect(this, clientName, serverHost, port,
+                tlsEnabled, fingerprint);
     }
 
     private void disconnect() {
-        Client client = currentClient;
-        if (client == null) return;
         connectButton.setEnabled(false);
         appendStatus("Disconnecting…");
-        new Thread(() -> client.disconnect(null), "Synerdroid disconnect").start();
-    }
-
-    private void onDisconnected(Client client) {
-        runOnUiThread(() -> {
-            if (currentClient != client) return;
-            currentClient = null;
-            setConnectionState(false);
-        });
+        SynerdroidConnectionService.disconnect(this);
     }
 
     private void setConnectionState(boolean connected) {
         connectButton.setText(connected ? R.string.disconnect : R.string.connect);
         connectButton.setEnabled(true);
+    }
+
+    @Override protected void onDestroy() {
+        SynerdroidConnectionService.setListener(null);
+        super.onDestroy();
     }
 
     private void saveSettings() {

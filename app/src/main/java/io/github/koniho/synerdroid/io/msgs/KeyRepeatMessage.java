@@ -24,34 +24,34 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 public class KeyRepeatMessage extends Message {
-	public static final MessageType MESSAGE_TYPE = MessageType.DKEYDOWN;
+	public static final MessageType MESSAGE_TYPE = MessageType.DKEYREPEAT;
 	
-	private short id;
-	private short mask;
-	private short count;
-	private short button;
+	private int id;
+	private int mask;
+	private int count;
+	private int button;
 	
 	public KeyRepeatMessage (DataInputStream din) throws IOException {
-		id = din.readShort ();
-		mask = din.readShort ();
-		count = din.readShort ();
-		button = din.readShort ();
+		id = din.readUnsignedShort ();
+		mask = din.readUnsignedShort ();
+		count = din.readUnsignedShort ();
+		button = din.readUnsignedShort ();
 	}
 
 	public int getID () {
-		return (int) id;
+		return id;
 	}
 	
 	public int getMask () {
-		return (int) mask;
+		return mask;
 	}
 	
 	public int getCount () { 
-		return (int) count;
+		return count;
 	}
 	
 	public int getButton () {
-		return (int) button;
+		return button;
 	}
 
 	

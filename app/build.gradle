@@ -1,5 +1,10 @@
 plugins {
     id 'com.android.application'
+
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
 }
 
 android {
@@ -10,12 +15,14 @@ android {
         applicationId 'io.github.koniho.synerdroid'
         minSdk 24
         targetSdk 35
-        versionCode 17
-        versionName '0.2.6'
+        versionCode 18
+        versionName '0.3.0'
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    testOptions { unitTests.returnDefaultValues = true }
 }
