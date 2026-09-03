@@ -13,6 +13,7 @@ public final class Injection {
     private static float remainderX;
     private static float remainderY;
     private static boolean invertScroll;
+    private static boolean switchingApps;
 
     private Injection() { }
 
@@ -36,6 +37,7 @@ public final class Injection {
         remainderX = remainderY = 0f;
         pressedButton = -1;
         screenFocused = false;
+        switchingApps = false;
         hidePointer();
     }
 
@@ -50,6 +52,7 @@ public final class Injection {
 
     public static void leaveScreen() {
         screenFocused = false;
+        switchingApps = false;
         hidePointer();
     }
 
@@ -64,11 +67,10 @@ public final class Injection {
         boolean alt = (mask & 0x0004) != 0;
         boolean shift = (mask & 0x0001) != 0;
         if (service != null && alt && isTab(key)) {
-            service.showRecents();
-            return;
-        }
-        if (service != null && alt && isHorizontalArrow(key)) {
-            service.moveRecents(isRightArrow(key));
+            boolean towardRight = !shift;
+            if (switchingApps) service.moveRecents(towardRight);
+            else service.showRecentsAndMove(towardRight);
+            switchingApps = true;
             return;
         }
         if (service != null && alt && shift && (key == 78 || key == 110)) {
@@ -85,19 +87,21 @@ public final class Injection {
                 || key == 0xFE03 || key == 0xEE03;
     }
 
-    private static boolean isHorizontalArrow(int key) {
-        return key == 61265 || key == 65361 || isRightArrow(key);
-    }
-
-    private static boolean isRightArrow(int key) {
-        return key == 61267 || key == 65363;
-    }
-
     private static boolean isTab(int key) {
         return key == 9 || key == 61193 || key == 65289;
     }
 
-    public static void keyup(int key, int mask) { }
+    public static void keyup(int key, int mask) {
+        if (switchingApps && isAltKey(key)) {
+            SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
+            if (service != null) service.selectRecents();
+            switchingApps = false;
+        }
+    }
+
+    private static boolean isAltKey(int key) {
+        return key == 0xFFE9 || key == 0xFFEA || key == 0xEFE9 || key == 0xEFEA;
+    }
 
     public static void movemouse(int dx, int dy) {
         SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();

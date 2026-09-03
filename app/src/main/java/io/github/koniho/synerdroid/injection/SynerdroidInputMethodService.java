@@ -42,6 +42,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private LinearLayout keyboardView;
     private boolean shifted;
     private boolean symbols;
+    private boolean alternateSymbols;
 
     public static boolean isReady() { return instance != null; }
 
@@ -70,12 +71,19 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private void buildKeyboard() {
         keyboardView.removeAllViews();
         if (symbols) {
-            addTextRow("1234567890", 0f, 0f);
-            addTextRow("@#$_&-+()/", 0f, 0f);
-            addTextRow("*\"':;!?%", 0.5f, 0.5f);
+            if (alternateSymbols) {
+                addTextRow("~\u0060|\u2022\u221a\u03c0\u00f7\u00d7\u00b6\u0394", 0f, 0f);
+                addTextRow("\u00a3\u00a2\u20ac\u00a5^\u00b0={}\\", 0f, 0f);
+            } else {
+                addTextRow("1234567890", 0f, 0f);
+                addTextRow("@#$_&-+()/", 0f, 0f);
+            }
             LinearLayout symbolsLast = newRow();
-            symbolsLast.addView(spacer(0.45f));
-            addCharacters(symbolsLast, "[]{}<>\\=");
+            symbolsLast.addView(key(alternateSymbols ? "?123" : "=\\<", 1.55f, view -> {
+                alternateSymbols = !alternateSymbols;
+                buildKeyboard();
+            }, true));
+            addCharacters(symbolsLast, alternateSymbols ? "[]<>\u00a7\u00a9\u00ae" : "*\"':;!?");
             symbolsLast.addView(key("\u232b", 1.55f, view -> deleteBackward(), true));
             keyboardView.addView(symbolsLast);
         } else {
@@ -91,11 +99,18 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         LinearLayout bottom = newRow();
         bottom.addView(key(symbols ? "ABC" : "?123", 1.55f, view -> {
             symbols = !symbols;
+            alternateSymbols = false;
             shifted = false;
             buildKeyboard();
         }, true));
         bottom.addView(key(",", 1f, view -> commit(","), false));
-        bottom.addView(key("space", 5.1f, view -> commit(" "), false));
+        if (symbols) {
+            bottom.addView(key(alternateSymbols ? "2/2" : "1/2", 1f, view -> {
+                alternateSymbols = !alternateSymbols;
+                buildKeyboard();
+            }, true));
+        }
+        bottom.addView(key("space", symbols ? 4.1f : 5.1f, view -> commit(" "), false));
         bottom.addView(key(".", 1f, view -> commit("."), false));
         bottom.addView(key("\u21b5", 1.55f, view -> sendAndroidKey(KeyEvent.KEYCODE_ENTER), true));
         keyboardView.addView(bottom);
