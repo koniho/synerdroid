@@ -96,9 +96,17 @@ public final class SynerdroidInputMethodService extends InputMethodService {
 
     private void addTextRow(String characters, float leftWeight, float rightWeight) {
         LinearLayout row = newRow();
-        if (leftWeight > 0f) row.addView(spacer(leftWeight));
+        Space left = leftWeight > 0f ? spacer(leftWeight) : null;
+        if (left != null) row.addView(left);
         addCharacters(row, characters);
-        if (rightWeight > 0f) row.addView(spacer(rightWeight));
+        Button first = (Button) row.getChildAt(left == null ? 0 : 1);
+        Button last = (Button) row.getChildAt(row.getChildCount() - 1);
+        if (left != null) forwardTouches(left, first);
+        if (rightWeight > 0f) {
+            Space right = spacer(rightWeight);
+            forwardTouches(right, last);
+            row.addView(right);
+        }
         keyboardView.addView(row);
     }
 
@@ -118,6 +126,10 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         space.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.MATCH_PARENT, weight));
         return space;
+    }
+
+    private void forwardTouches(View area, Button nearestKey) {
+        area.setOnTouchListener((view, event) -> nearestKey.dispatchTouchEvent(event));
     }
 
     private LinearLayout newRow() {
