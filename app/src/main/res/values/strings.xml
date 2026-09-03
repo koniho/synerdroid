@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    
     <string name="app_name">Synergy</string>
+    <string name="app_subtitle">Secure remote input for Android</string>
+    <string name="client_name">Client name</string>
+    <string name="server_address">Server address</string>
+    <string name="server_address_hint">Hostname or IP address</string>
+    <string name="server_port">Port</string>
+    <string name="use_tls">Use TLS</string>
+    <string name="tls_fingerprint">Server certificate</string>
+    <string name="tls_fingerprint_hint">SHA-256 fingerprint</string>
+    <string name="connect">Connect</string>
+    <string name="connection_log">Connection log</string>
+    <string name="status_idle">Ready. Configure the server and connect.</string>
+    <string name="accessibility_service_name">Synergy input control</string>
+    <string name="accessibility_description">Allows a Synergy server to control taps, scrolling, navigation, and text entry on this device.</string>
+    <string name="enable_accessibility">Accessibility settings</string>
+    <string name="service_required">Enable the Synergy accessibility service before connecting.</string>
+    <string name="invalid_fingerprint">Enter the server certificate SHA-256 fingerprint (64 hexadecimal digits).</string>
 </resources>

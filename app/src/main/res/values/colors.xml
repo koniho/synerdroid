@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="synergy_accent">#6750A4</color>
+    <color name="synergy_on_accent">#FFFFFF</color>
+    <color name="synergy_surface">#F4F2F7</color>
+    <color name="synergy_on_surface">#25232A</color>
+    <color name="synergy_outline">#79747E</color>
+</resources>

@@ -1,49 +1,50 @@
 package org.synergy.injection;
 
-import java.io.DataOutputStream;
-
-import org.synergy.base.Log;
-
+/** Rootless input bridge backed by the enabled Synergy accessibility service. */
 public final class Injection {
+    private static int pointerX;
+    private static int pointerY;
 
-	static {
-		System.loadLibrary ("synergy-jni");
-	}
-	
-	/**
-	 * Functions imported from synergy-jni library
-	 */
-	public static final native void start (String deviceName);
-	public static native void stop ();
-	public static native void keydown (int key, int mask);
-	public static native void keyup (int key, int mask);
-	public static final native void movemouse (final int x, final int y);
-	public static native void mousedown (int buttonId);
-	public static native void mouseup (int buttonId);
-	public static native void mousewheel (int x, int y);
-	
-	private Injection () { }
-	
-	public static void setPermissionsForInputDevice () {
-		Log.debug ("Starting injection");
-		try {
-			Process process = Runtime.getRuntime ().exec ("su");
-			DataOutputStream dout = new DataOutputStream (process.getOutputStream ());
-			dout.writeBytes ("chmod 666 /dev/uinput");
-			dout.flush ();
-			dout.close ();
-			process.waitFor ();
-			Log.debug ("Access to /dev/uinput granted");
-		} catch (Exception e) {
-			e.printStackTrace ();
-		}
-	}
+    private Injection() { }
 
-	public static void startInjection (String deviceName) {
-		start (deviceName);
-	}
+    public static void setPermissionsForInputDevice() { }
 
-	public static void stopInjection () {
-		stop ();
-	}
+    public static boolean isReady() {
+        return SynergyAccessibilityService.isReady();
+    }
+
+    public static void startInjection(String ignoredDeviceName) {
+        pointerX = 0;
+        pointerY = 0;
+    }
+
+    public static void stopInjection() { }
+    public static void stop() { }
+
+    public static void keydown(int key, int mask) {
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service != null) service.keyDown(key, mask);
+    }
+
+    public static void keyup(int key, int mask) { }
+
+    public static void movemouse(int dx, int dy) {
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service == null) return;
+        pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, pointerX + dx));
+        pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + dy));
+        service.movePointer(pointerX, pointerY);
+    }
+
+    public static void mousedown(int buttonId) { }
+
+    public static void mouseup(int buttonId) {
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service != null) service.click(pointerX, pointerY, buttonId);
+    }
+
+    public static void mousewheel(int x, int y) {
+        SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        if (service != null) service.scroll(pointerX, pointerY, y);
+    }
 }

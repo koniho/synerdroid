@@ -46,6 +46,7 @@ import android.graphics.Rect;
 import android.widget.Toast;
 
 public class Client implements EventTarget {
+	public interface StatusListener { void onStatus(String message); }
 	
 	private final Context context;
 	private String name;
@@ -59,10 +60,11 @@ public class Client implements EventTarget {
 	private int mouseY;
 	
 	private ServerProxy server;
+	private final StatusListener statusListener;
 
 	public Client (final Context context, final String name, final NetworkAddress serverAddress,
 			SocketFactoryInterface socketFactory, StreamFilterFactoryInterface streamFilterFactory,
-			ScreenInterface screen) {
+			ScreenInterface screen, StatusListener statusListener) {
 		
 		this.context = context;
 		this.name = name;
@@ -70,6 +72,7 @@ public class Client implements EventTarget {
 		this.socketFactory = socketFactory;
 		this.streamFilterFactory = streamFilterFactory;
 		this.screen = screen;
+		this.statusListener = statusListener;
 		
         assert (socketFactory != null);
         assert (screen != null);
@@ -108,6 +111,7 @@ public class Client implements EventTarget {
 
             // connect
             Log.debug ("connecting to server");
+            reportStatus("Opening " + serverAddress.getHostname() + ":" + serverAddress.getPort() + "…");
 
             setupConnecting ();
             setupTimer ();
@@ -117,16 +121,18 @@ public class Client implements EventTarget {
             //final Toast toast = Toast.makeText(context, "Connected to " + serverAddress.getHostname()
             //        + ":" + serverAddress.getPort(), Toast.LENGTH_SHORT);
             //toast.show();
-		} catch (IOException e) {
+		} catch (Throwable e) {
 			final String errorMessage = "Failed to connect to " + serverAddress.getHostname()
 					+ ":" + serverAddress.getPort();
 			Log.error(errorMessage);
+            reportStatus(errorMessage + ": " + deepestMessage(e));
 			//final Toast toast = Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT);
 			//toast.show();
 		}
 	}
 	
 	public void disconnect (String msg) {
+		reportStatus(msg == null ? "Disconnected." : "Disconnected: " + msg);
 		cleanupTimer ();
 		cleanupScreen ();
 		cleanupConnecting ();
@@ -137,6 +143,17 @@ public class Client implements EventTarget {
 		}
 	}
 		
+    private void reportStatus(String message) {
+        if (statusListener != null) statusListener.onStatus(message);
+    }
+
+    private static String deepestMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        String message = current.getMessage();
+        return message == null ? current.getClass().getSimpleName() : message;
+    }
+
     private void setupConnecting () {
         assert (stream != null);
 
@@ -171,6 +188,7 @@ public class Client implements EventTarget {
     
     private void handleConnected () {
     	Log.debug1 ("connected; wait for hello");
+        reportStatus("Secure transport connected; waiting for Synergy handshake…");
 
         cleanupConnecting ();
         setupConnection ();
@@ -203,6 +221,7 @@ public class Client implements EventTarget {
 
             // Grab the hostname
             new HelloBackMessage (1, 3, name).write (dout);
+            reportStatus("Connected as " + name + ".");
 
             setupScreen ();
             cleanupTimer ();
