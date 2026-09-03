@@ -4,6 +4,8 @@ package io.github.koniho.synerdroid.injection;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.inputmethodservice.InputMethodService;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.Gravity;
@@ -20,6 +22,7 @@ import io.github.koniho.synerdroid.diagnostics.CrashReporter;
 /** Synergy's remote-input bridge with a compact fallback on-screen keyboard. */
 public final class SynerdroidInputMethodService extends InputMethodService {
     private static volatile SynerdroidInputMethodService instance;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private LinearLayout keyboardView;
     private boolean shifted;
     private boolean symbols;
@@ -208,23 +211,26 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     public static boolean sendKey(int key) {
         SynerdroidInputMethodService service = instance;
         if (service == null) return false;
-        InputConnection input = service.getCurrentInputConnection();
-        if (input == null) return false;
-
         int androidKey = mapSpecialKey(key);
-        if (androidKey == KeyEvent.KEYCODE_DEL) {
-            service.deleteBackward();
-            return true;
+        boolean printable = key >= 32 && key < 0xE000 && Character.isValidCodePoint(key);
+        if (androidKey == KeyEvent.KEYCODE_UNKNOWN && !printable) return false;
+        service.mainHandler.post(() -> service.dispatchRemoteKey(key, androidKey));
+        return true;
+    }
+
+    private void dispatchRemoteKey(int key, int androidKey) {
+        try {
+            if (androidKey == KeyEvent.KEYCODE_DEL) {
+                deleteBackward();
+            } else if (androidKey != KeyEvent.KEYCODE_UNKNOWN) {
+                sendAndroidKey(androidKey);
+            } else {
+                InputConnection input = getCurrentInputConnection();
+                if (input != null) input.commitText(new String(Character.toChars(key)), 1);
+            }
+        } catch (RuntimeException ignored) {
+            // A focused editor may close while queued remote input is draining.
         }
-        if (androidKey != KeyEvent.KEYCODE_UNKNOWN) {
-            input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, androidKey));
-            input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, androidKey));
-            return true;
-        }
-        if (key >= 32 && key < 0xE000 && Character.isValidCodePoint(key)) {
-            return input.commitText(new String(Character.toChars(key)), 1);
-        }
-        return false;
     }
 
     private static int mapSpecialKey(int key) {
