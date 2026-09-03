@@ -11,12 +11,14 @@ import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.Space;
 
 /** Synergy's remote-input bridge with a compact fallback on-screen keyboard. */
 public final class SynerdroidInputMethodService extends InputMethodService {
     private static volatile SynerdroidInputMethodService instance;
     private LinearLayout keyboardView;
     private boolean shifted;
+    private boolean symbols;
 
     public static boolean isReady() { return instance != null; }
 
@@ -34,33 +36,65 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         keyboardView = new LinearLayout(this);
         keyboardView.setOrientation(LinearLayout.VERTICAL);
         keyboardView.setPadding(dp(4), dp(6), dp(4), dp(8));
-        keyboardView.setBackgroundColor(Color.rgb(32, 32, 36));
-        addTextRow("1234567890");
-        addTextRow("qwertyuiop");
-        addTextRow("asdfghjkl");
-        addTextRow("zxcvbnm");
-
-        LinearLayout actions = newRow();
-        actions.addView(key("⇧", 1.1f, view -> toggleShift()));
-        actions.addView(key("⌫", 1.1f, view -> sendAndroidKey(KeyEvent.KEYCODE_DEL)));
-        actions.addView(key("space", 3.2f, view -> commit(" ")));
-        actions.addView(key("↵", 1.1f, view -> sendAndroidKey(KeyEvent.KEYCODE_ENTER)));
-        actions.addView(key("🌐", 1.1f, view -> switchKeyboard()));
-        keyboardView.addView(actions);
+        keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
+        buildKeyboard();
         return keyboardView;
     }
 
-    private void addTextRow(String characters) {
+    private void buildKeyboard() {
+        keyboardView.removeAllViews();
+        if (symbols) {
+            addTextRow("1234567890", 0f, 0f);
+            addTextRow("@#$_&-+()/", 0f, 0f);
+            addTextRow("*\"':;!?%", 0.5f, 0.5f);
+            addTextRow("[]{}<>\\=", 0.6f, 0.6f);
+        } else {
+            addTextRow("1234567890", 0f, 0f);
+            addTextRow("qwertyuiop", 0f, 0f);
+            addTextRow("asdfghjkl", 0.55f, 0.55f);
+            LinearLayout letters = newRow();
+            letters.addView(key("\u21e7", 1.55f, view -> toggleShift(), true));
+            addCharacters(letters, "zxcvbnm");
+            letters.addView(key("\u232b", 1.55f, view -> sendAndroidKey(KeyEvent.KEYCODE_DEL), true));
+            keyboardView.addView(letters);
+        }
+        LinearLayout bottom = newRow();
+        bottom.addView(key(symbols ? "ABC" : "?123", 1.55f, view -> {
+            symbols = !symbols;
+            shifted = false;
+            buildKeyboard();
+        }, true));
+        bottom.addView(key(",", 1f, view -> commit(","), false));
+        bottom.addView(key("space", 5.1f, view -> commit(" "), false));
+        bottom.addView(key(".", 1f, view -> commit("."), false));
+        bottom.addView(key("\u21b5", 1.55f, view -> sendAndroidKey(KeyEvent.KEYCODE_ENTER), true));
+        keyboardView.addView(bottom);
+    }
+
+    private void addTextRow(String characters, float leftWeight, float rightWeight) {
         LinearLayout row = newRow();
+        if (leftWeight > 0f) row.addView(spacer(leftWeight));
+        addCharacters(row, characters);
+        if (rightWeight > 0f) row.addView(spacer(rightWeight));
+        keyboardView.addView(row);
+    }
+
+    private void addCharacters(LinearLayout row, String characters) {
         for (int i = 0; i < characters.length(); i++) {
             String value = String.valueOf(characters.charAt(i));
             row.addView(key(value, 1f, view -> {
                 String text = ((Button) view).getText().toString();
                 commit(text);
                 if (shifted) toggleShift();
-            }));
+            }, false));
         }
-        keyboardView.addView(row);
+    }
+
+    private Space spacer(float weight) {
+        Space space = new Space(this);
+        space.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.MATCH_PARENT, weight));
+        return space;
     }
 
     private LinearLayout newRow() {
@@ -69,25 +103,28 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         row.setGravity(Gravity.CENTER);
         row.setPadding(0, dp(2), 0, dp(2));
         row.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(54)));
         return row;
     }
 
-    private Button key(String label, float weight, View.OnClickListener listener) {
+    private Button key(String label, float weight, View.OnClickListener listener, boolean special) {
         Button button = new Button(this);
         button.setText(label);
-        button.setTextSize(16);
-        button.setTextColor(Color.WHITE);
+        button.setTextSize(label.length() > 2 ? 15 : 22);
+        button.setTextColor(Color.rgb(225, 233, 238));
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
         button.setPadding(0, 0, 0, 0);
+        button.setMinWidth(0);
+        button.setMinHeight(0);
+        button.setStateListAnimator(null);
         GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.rgb(66, 66, 72));
-        background.setCornerRadius(dp(7));
+        background.setColor(special ? Color.rgb(47, 70, 82) : Color.rgb(40, 50, 56));
+        background.setCornerRadius(dp(10));
         button.setBackground(background);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.MATCH_PARENT, weight);
-        params.setMargins(dp(2), 0, dp(2), 0);
+        params.setMargins(dp(3), 0, dp(3), 0);
         button.setLayoutParams(params);
         button.setOnClickListener(listener);
         return button;
@@ -95,18 +132,18 @@ public final class SynerdroidInputMethodService extends InputMethodService {
 
     private void toggleShift() {
         shifted = !shifted;
-        if (keyboardView == null) return;
-        for (int rowIndex = 0; rowIndex < keyboardView.getChildCount(); rowIndex++) {
-            View rowView = keyboardView.getChildAt(rowIndex);
-            if (!(rowView instanceof LinearLayout)) continue;
-            LinearLayout row = (LinearLayout) rowView;
-            for (int keyIndex = 0; keyIndex < row.getChildCount(); keyIndex++) {
-                View keyView = row.getChildAt(keyIndex);
-                if (!(keyView instanceof Button)) continue;
-                Button button = (Button) keyView;
-                String text = button.getText().toString();
-                if (text.length() == 1 && Character.isLetter(text.charAt(0))) {
-                    button.setText(shifted ? text.toUpperCase() : text.toLowerCase());
+        buildKeyboard();
+        if (!symbols && shifted) {
+            for (int rowIndex = 1; rowIndex <= 3; rowIndex++) {
+                LinearLayout row = (LinearLayout) keyboardView.getChildAt(rowIndex);
+                for (int keyIndex = 0; keyIndex < row.getChildCount(); keyIndex++) {
+                    View keyView = row.getChildAt(keyIndex);
+                    if (!(keyView instanceof Button)) continue;
+                    Button button = (Button) keyView;
+                    String text = button.getText().toString();
+                    if (text.length() == 1 && Character.isLetter(text.charAt(0))) {
+                        button.setText(text.toUpperCase());
+                    }
                 }
             }
         }
