@@ -71,7 +71,6 @@ public class TCPSocket implements DataSocketInterface {
 
         connected = true;
         sendEvent(EventType.SOCKET_CONNECTED);
-        sendEvent(EventType.STREAM_INPUT_READY);
     }
 
     private Socket createTlsSocket(Socket transport, String host, int port) throws IOException {

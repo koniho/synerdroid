@@ -192,6 +192,7 @@ public class Client implements EventTarget {
 
         cleanupConnecting ();
         setupConnection ();
+        handleHello ();
 
         // TODO Clipboard
     }
