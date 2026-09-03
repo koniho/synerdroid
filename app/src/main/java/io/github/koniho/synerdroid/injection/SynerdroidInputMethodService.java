@@ -32,6 +32,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private boolean remoteDeleteScheduled;
     private PopupWindow keyPreview;
     private Runnable repeatingKey;
+    private Button forwardedTouchKey;
     private final Runnable hidePreview = this::dismissKeyPreview;
     private LinearLayout keyboardView;
     private boolean shifted;
@@ -56,6 +57,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         keyboardView.setClipChildren(false);
         keyboardView.setPadding(dp(4), dp(6), dp(4), dp(64));
         keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
+        keyboardView.setOnTouchListener((view, event) -> forwardBelowSpacebar(event));
         buildKeyboard();
         return keyboardView;
     }
@@ -99,12 +101,10 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         Space left = leftWeight > 0f ? spacer(leftWeight) : null;
         if (left != null) row.addView(left);
         addCharacters(row, characters);
-        Button first = (Button) row.getChildAt(left == null ? 0 : 1);
-        Button last = (Button) row.getChildAt(row.getChildCount() - 1);
-        if (left != null) forwardTouches(left, first);
+        if (left != null) forwardTouches(left);
         if (rightWeight > 0f) {
             Space right = spacer(rightWeight);
-            forwardTouches(right, last);
+            forwardTouches(right);
             row.addView(right);
         }
         keyboardView.addView(row);
@@ -128,8 +128,82 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         return space;
     }
 
-    private void forwardTouches(View area, Button nearestKey) {
-        area.setOnTouchListener((view, event) -> nearestKey.dispatchTouchEvent(event));
+    private void forwardTouches(View area) {
+        area.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                forwardedTouchKey = findClosestKey(event.getRawX(), event.getRawY());
+            }
+            Button target = forwardedTouchKey;
+            if (target == null) return true;
+            boolean handled = target.dispatchTouchEvent(event);
+            if (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                forwardedTouchKey = null;
+            }
+            return handled;
+        });
+    }
+
+    private boolean forwardBelowSpacebar(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            Button spacebar = findKeyByLabel("space");
+            if (spacebar == null) return false;
+            int[] location = new int[2];
+            spacebar.getLocationOnScreen(location);
+            boolean below = event.getRawY() >= location[1] + spacebar.getHeight();
+            boolean aligned = event.getRawX() >= location[0]
+                    && event.getRawX() < location[0] + spacebar.getWidth();
+            if (!below || !aligned) return false;
+            forwardedTouchKey = spacebar;
+        }
+        Button target = forwardedTouchKey;
+        if (target == null) return false;
+        boolean handled = target.dispatchTouchEvent(event);
+        if (event.getActionMasked() == MotionEvent.ACTION_UP
+                || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            forwardedTouchKey = null;
+        }
+        return handled;
+    }
+
+    private Button findKeyByLabel(String label) {
+        for (int rowIndex = 0; rowIndex < keyboardView.getChildCount(); rowIndex++) {
+            View rowView = keyboardView.getChildAt(rowIndex);
+            if (!(rowView instanceof LinearLayout)) continue;
+            LinearLayout row = (LinearLayout) rowView;
+            for (int keyIndex = 0; keyIndex < row.getChildCount(); keyIndex++) {
+                View key = row.getChildAt(keyIndex);
+                if (key instanceof Button
+                        && ((Button) key).getText().toString().equals(label)) {
+                    return (Button) key;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Button findClosestKey(float screenX, float screenY) {
+        Button closest = null;
+        double closestDistance = Double.MAX_VALUE;
+        int[] location = new int[2];
+        for (int rowIndex = 0; rowIndex < keyboardView.getChildCount(); rowIndex++) {
+            View rowView = keyboardView.getChildAt(rowIndex);
+            if (!(rowView instanceof LinearLayout)) continue;
+            LinearLayout row = (LinearLayout) rowView;
+            for (int keyIndex = 0; keyIndex < row.getChildCount(); keyIndex++) {
+                View candidate = row.getChildAt(keyIndex);
+                if (!(candidate instanceof Button) || candidate.getVisibility() != View.VISIBLE) continue;
+                candidate.getLocationOnScreen(location);
+                float dx = screenX - (location[0] + candidate.getWidth() / 2f);
+                float dy = screenY - (location[1] + candidate.getHeight() / 2f);
+                double distance = dx * dx + dy * dy;
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closest = (Button) candidate;
+                }
+            }
+        }
+        return closest;
     }
 
     private LinearLayout newRow() {
