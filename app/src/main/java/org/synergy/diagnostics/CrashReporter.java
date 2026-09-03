@@ -12,8 +12,6 @@ import java.nio.charset.StandardCharsets;
 
 public final class CrashReporter {
     private static final String CRASH_FILE = "last-crash.txt";
-    private static final String LOG_FILE = "connection.log";
-    private static final int MAX_DISPLAY_CHARS = 16000;
 
     private CrashReporter() { }
 
@@ -29,10 +27,8 @@ public final class CrashReporter {
         });
     }
 
-    public static synchronized void append(Context context, String line) {
-        File file = new File(context.getFilesDir(), LOG_FILE);
-        if (file.length() > 128_000) file.delete();
-        write(file, line + "\n", true);
+    public static void clearConnectionLog(Context context) {
+        new File(context.getFilesDir(), "connection.log").delete();
     }
 
     public static String readPreviousCrash(Context context) {
@@ -40,12 +36,6 @@ public final class CrashReporter {
         String value = read(file);
         if (!value.isEmpty()) file.delete();
         return value;
-    }
-
-    public static String readRecentLog(Context context) {
-        String value = read(new File(context.getFilesDir(), LOG_FILE));
-        return value.length() > MAX_DISPLAY_CHARS
-                ? value.substring(value.length() - MAX_DISPLAY_CHARS) : value;
     }
 
     private static String read(File file) {

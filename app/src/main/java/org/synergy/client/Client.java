@@ -221,7 +221,6 @@ public class Client implements EventTarget {
 
             // Grab the hostname
             new HelloBackMessage (1, 3, name).write (dout);
-            reportStatus("Connected as " + name + ".");
 
             setupScreen ();
             cleanupTimer ();
@@ -272,7 +271,7 @@ public class Client implements EventTarget {
 
     private void setupScreen () {
         assert (server == null);
-        assert (screen == null);
+        assert (screen != null);
 
         server = new ServerProxy (this, stream);
         
@@ -315,6 +314,7 @@ public class Client implements EventTarget {
 
     public void handshakeComplete () {
         screen.enable ();
+        reportStatus("Synergy handshake complete; connected as " + name + ".");
         sendEvent (EventType.CLIENT_CONNECTED, "");
     }
 

@@ -26,6 +26,8 @@ import org.synergy.net.SynergyConnectTask;
 import org.synergy.net.TCPSocket;
 import org.synergy.net.TCPSocketFactory;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -48,7 +50,7 @@ public class Synergy extends Activity {
                     event = EventQueue.getInstance().getEvent(event, -1.0);
                 }
             } catch (Throwable error) {
-                appendStatus("Input loop stopped: " + error.getMessage());
+                appendStatus("Input loop stopped:\n" + stackTrace(error));
             } finally {
                 mainLoopThread = null;
                 Injection.stop();
@@ -63,9 +65,8 @@ public class Synergy extends Activity {
         setContentView(R.layout.main);
         statusView = findViewById(R.id.statusTextView);
         migrateLegacyPreferences();
-        String previousLog = CrashReporter.readRecentLog(this);
+        CrashReporter.clearConnectionLog(this);
         String previousCrash = CrashReporter.readPreviousCrash(this);
-        if (!previousLog.isEmpty()) statusView.setText(previousLog.trim());
         if (!previousCrash.isEmpty()) {
             statusView.append("\n\nPREVIOUS CRASH\n" + previousCrash);
         }
@@ -205,13 +206,18 @@ public class Synergy extends Activity {
         return ((EditText) findViewById(id)).getText().toString().trim();
     }
 
+    private static String stackTrace(Throwable error) {
+        StringWriter output = new StringWriter();
+        error.printStackTrace(new PrintWriter(output));
+        return output.toString();
+    }
+
     private void appendStatus(String message) {
         runOnUiThread(() -> {
             String time = DateFormat.getTimeInstance(DateFormat.MEDIUM).format(new Date());
             if (statusView.length() > 0) statusView.append("\n");
             String line = time + "  " + message;
             statusView.append(line);
-            CrashReporter.append(this, line);
         });
     }
 }
