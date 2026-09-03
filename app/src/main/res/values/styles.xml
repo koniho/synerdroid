@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Synergy" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Synerdroid" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">@color/synergy_accent</item>
         <item name="android:navigationBarColor">@color/synergy_surface</item>
@@ -9,40 +9,40 @@
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 
-    <style name="TextAppearance.Synergy.Headline" parent="android:style/TextAppearance.Material.Headline">
+    <style name="TextAppearance.Synerdroid.Headline" parent="android:style/TextAppearance.Material.Headline">
         <item name="android:textSize">32sp</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="TextAppearance.Synergy.Supporting" parent="android:style/TextAppearance.Material.Body1">
+    <style name="TextAppearance.Synerdroid.Supporting" parent="android:style/TextAppearance.Material.Body1">
         <item name="android:textColor">@color/synergy_outline</item>
         <item name="android:textSize">15sp</item>
     </style>
-    <style name="TextAppearance.Synergy.Section" parent="android:style/TextAppearance.Material.Title">
+    <style name="TextAppearance.Synerdroid.Section" parent="android:style/TextAppearance.Material.Title">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="Synergy.FieldLabel" parent="android:style/Widget.Material.TextView">
+    <style name="Synerdroid.FieldLabel" parent="android:style/Widget.Material.TextView">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">18dp</item>
         <item name="android:layout_marginBottom">7dp</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="Synergy.EditText" parent="android:style/Widget.Material.EditText">
+    <style name="Synerdroid.EditText" parent="android:style/Widget.Material.EditText">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:background">@drawable/edit_text_background</item>
         <item name="android:textColor">@color/synergy_on_surface</item>
         <item name="android:textColorHint">@color/synergy_outline</item>
     </style>
-    <style name="Synergy.PrimaryButton" parent="android:style/Widget.Material.Button">
+    <style name="Synerdroid.PrimaryButton" parent="android:style/Widget.Material.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">56dp</item>
         <item name="android:backgroundTint">@color/synergy_accent</item>
         <item name="android:textColor">@color/synergy_on_accent</item>
         <item name="android:textStyle">bold</item>
     </style>
-    <style name="Synergy.SecondaryButton" parent="android:style/Widget.Material.Button">
+    <style name="Synerdroid.SecondaryButton" parent="android:style/Widget.Material.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">52dp</item>
         <item name="android:textColor">@color/synergy_accent</item>

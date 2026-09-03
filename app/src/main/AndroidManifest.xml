@@ -3,13 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:theme="@style/Theme.Synergy"
+        android:theme="@style/Theme.Synerdroid"
         android:allowBackup="false"
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:supportsRtl="true">
         <activity
-            android:name=".Synergy"
+            android:name=".SynerdroidActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
             android:label="@string/app_name">
@@ -20,7 +20,7 @@
         </activity>
 
         <service
-            android:name=".injection.SynergyInputMethodService"
+            android:name=".injection.SynerdroidInputMethodService"
             android:exported="true"
             android:label="@string/ime_service_name"
             android:permission="android.permission.BIND_INPUT_METHOD">
@@ -33,7 +33,7 @@
         </service>
 
         <service
-            android:name=".injection.SynergyAccessibilityService"
+            android:name=".injection.SynerdroidAccessibilityService"
             android:description="@string/accessibility_description"
             android:exported="true"
             android:label="@string/accessibility_service_name"

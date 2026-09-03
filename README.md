@@ -1,29 +1,21 @@
-# Synergy for modern Android
+# Synerdroid
 
-An experimental Synergy client for Android 7+ updated from the archived
-`symless/synergy-android-7` project.
+Synerdroid is an unofficial, open-source Android client compatible with Synergy. It is not affiliated with, endorsed by, or distributed by Synergy App Ltd (formerly Symless).
 
-## What changed
+The project modernizes the archived `symless/synergy-android-7` client for Android 7 and later.
 
-- Targets Android API 35 and builds with current Android Gradle tooling.
-- Replaces root-only `/dev/uinput` access with an Android Accessibility Service.
-- Adds TLS 1.2/1.3 with SHA-256 server-certificate pinning.
-- Uses a responsive, scrollable light/dark UI.
-- Shows persistent connection diagnostics and previous Java crash details.
-- Saves the last values entered without supplying a default server address.
+## Features
 
-## Accessibility limitations
-
-Android's public Accessibility API can perform taps, swipes, scrolling, global
-navigation, and basic text editing. It cannot provide exact rootless emulation
-of arbitrary hardware key events, mouse hover, or every desktop shortcut.
+- Synergy core-protocol client tested with a Synergy 3 server
+- Rootless pointer and navigation through Android Accessibility Service
+- Optional Synerdroid on-screen keyboard and remote text input
+- TLS 1.2/1.3 with exact SHA-256 server-certificate pinning
+- Adjustable pointer speed and scroll direction
+- Responsive light/dark interface and connection diagnostics
 
 ## Build
 
-Requirements:
-
-- JDK 17 or newer
-- Android SDK 35
+Requirements: JDK 17 and Android SDK 35.
 
 ```sh
 ./gradlew assembleDebug
@@ -33,20 +25,14 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Configure
 
-Enable **Synergy input control** in Android Accessibility settings. In the app,
-enter a client screen name that is present in the server's Synergy config, the
-server hostname or IP, port 24800, and the SHA-256 fingerprint printed by the
-TLS-enabled Synergy server.
+Enable **Synerdroid input control** in Android Accessibility settings. In Synerdroid, enter a client screen name present in the Synergy server configuration, the server hostname or IP, port 24800, and the SHA-256 fingerprint of the TLS-enabled server certificate.
 
-The server must allow the chosen client screen name. Synergy 3's "add by IP"
-flow expects another full Synergy 3 installation, so custom Android clients
-should instead be added to the server's text configuration.
+Synergy 3's “add by IP” flow expects another full Synergy 3 installation. Until native pairing is implemented, add Synerdroid to the server's text configuration.
 
-## Security
+## Security and privacy
 
-TLS connections require an exact SHA-256 certificate fingerprint. The client
-will not silently trust an arbitrary self-signed certificate.
+Synerdroid sends and receives input directly over the local network. TLS connections require an exact certificate fingerprint and do not silently trust arbitrary self-signed certificates. The app currently includes no analytics, advertising, or telemetry.
 
-## License
+## License and trademarks
 
-The original project is GPL-licensed; see [COPYING](COPYING).
+This derivative is distributed under GNU GPL v2; see [COPYING](COPYING) and [NOTICE](NOTICE). “Synergy” is used only to describe protocol and product compatibility. Synergy and related marks belong to their respective owner. Synerdroid is an independent community project.

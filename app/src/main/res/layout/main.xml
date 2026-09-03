@@ -18,35 +18,35 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textAppearance="@style/TextAppearance.Synergy.Headline" />
+            android:textAppearance="@style/TextAppearance.Synerdroid.Headline" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/app_subtitle"
-            android:textAppearance="@style/TextAppearance.Synergy.Supporting" />
+            android:textAppearance="@style/TextAppearance.Synerdroid.Supporting" />
 
-        <TextView style="@style/Synergy.FieldLabel" android:text="@string/client_name" />
+        <TextView style="@style/Synerdroid.FieldLabel" android:text="@string/client_name" />
         <EditText
             android:id="@+id/clientNameEditText"
-            style="@style/Synergy.EditText"
+            style="@style/Synerdroid.EditText"
             android:hint="android"
             android:inputType="textNoSuggestions"
             android:singleLine="true" />
 
-        <TextView style="@style/Synergy.FieldLabel" android:text="@string/server_address" />
+        <TextView style="@style/Synerdroid.FieldLabel" android:text="@string/server_address" />
         <EditText
             android:id="@+id/serverHostEditText"
-            style="@style/Synergy.EditText"
+            style="@style/Synerdroid.EditText"
             android:hint="@string/server_address_hint"
             android:inputType="textUri"
             android:singleLine="true" />
 
-        <TextView style="@style/Synergy.FieldLabel" android:text="@string/server_port" />
+        <TextView style="@style/Synerdroid.FieldLabel" android:text="@string/server_port" />
         <EditText
             android:id="@+id/serverPortEditText"
-            style="@style/Synergy.EditText"
+            style="@style/Synerdroid.EditText"
             android:inputType="number"
             android:maxLength="5"
             android:singleLine="true"
@@ -61,10 +61,10 @@
             android:checked="true"
             android:text="@string/use_tls" />
 
-        <TextView style="@style/Synergy.FieldLabel" android:text="@string/tls_fingerprint" />
+        <TextView style="@style/Synerdroid.FieldLabel" android:text="@string/tls_fingerprint" />
         <EditText
             android:id="@+id/tlsFingerprintEditText"
-            style="@style/Synergy.EditText"
+            style="@style/Synerdroid.EditText"
             android:fontFamily="monospace"
             android:hint="@string/tls_fingerprint_hint"
             android:inputType="textNoSuggestions|textCapCharacters"
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/pointer_speed"
-                android:textAppearance="@style/TextAppearance.Synergy.Section" />
+                android:textAppearance="@style/TextAppearance.Synerdroid.Section" />
 
             <TextView
                 android:id="@+id/pointerSpeedValue"
@@ -108,19 +108,19 @@
 
         <Button
             android:id="@+id/accessibilityButton"
-            style="@style/Synergy.SecondaryButton"
+            style="@style/Synerdroid.SecondaryButton"
             android:layout_marginTop="24dp"
             android:text="@string/enable_accessibility" />
 
         <Button
             android:id="@+id/keyboardButton"
-            style="@style/Synergy.SecondaryButton"
+            style="@style/Synerdroid.SecondaryButton"
             android:layout_marginTop="12dp"
             android:text="@string/keyboard_settings" />
 
         <Button
             android:id="@+id/connectButton"
-            style="@style/Synergy.PrimaryButton"
+            style="@style/Synerdroid.PrimaryButton"
             android:layout_marginTop="12dp"
             android:text="@string/connect" />
 
@@ -129,7 +129,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="@string/connection_log"
-            android:textAppearance="@style/TextAppearance.Synergy.Section" />
+            android:textAppearance="@style/TextAppearance.Synerdroid.Section" />
 
         <TextView
             android:id="@+id/statusTextView"
