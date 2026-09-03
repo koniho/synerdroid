@@ -43,7 +43,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     @Override public View onCreateInputView() {
         keyboardView = new LinearLayout(this);
         keyboardView.setOrientation(LinearLayout.VERTICAL);
-        keyboardView.setPadding(dp(4), dp(6), dp(4), dp(8));
+        keyboardView.setPadding(dp(4), dp(6), dp(4), dp(24));
         keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
         buildKeyboard();
         return keyboardView;
