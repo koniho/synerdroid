@@ -23,6 +23,9 @@ import io.github.koniho.synerdroid.diagnostics.CrashReporter;
 public final class SynerdroidInputMethodService extends InputMethodService {
     private static volatile SynerdroidInputMethodService instance;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Object remoteDeleteLock = new Object();
+    private int pendingRemoteDeletes;
+    private boolean remoteDeleteScheduled;
     private LinearLayout keyboardView;
     private boolean shifted;
     private boolean symbols;
@@ -43,7 +46,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     @Override public View onCreateInputView() {
         keyboardView = new LinearLayout(this);
         keyboardView.setOrientation(LinearLayout.VERTICAL);
-        keyboardView.setPadding(dp(4), dp(6), dp(4), dp(24));
+        keyboardView.setPadding(dp(4), dp(6), dp(4), dp(64));
         keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
         buildKeyboard();
         return keyboardView;
@@ -174,6 +177,10 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     private void deleteBackward() {
+        deleteBackward(1);
+    }
+
+    private void deleteBackward(int count) {
         InputConnection input = getCurrentInputConnection();
         if (input == null) return;
         try {
@@ -181,7 +188,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             CharSequence selected = input.getSelectedText(0);
             if (selected != null && selected.length() > 0) {
                 input.commitText("", 1);
-            } else if (!input.deleteSurroundingText(1, 0)) {
+            } else if (!input.deleteSurroundingText(count, 0)) {
                 input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
                 input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
             }
@@ -214,8 +221,31 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         int androidKey = mapSpecialKey(key);
         boolean printable = key >= 32 && key < 0xE000 && Character.isValidCodePoint(key);
         if (androidKey == KeyEvent.KEYCODE_UNKNOWN && !printable) return false;
-        service.mainHandler.post(() -> service.dispatchRemoteKey(key, androidKey));
+        if (androidKey == KeyEvent.KEYCODE_DEL) {
+            service.queueRemoteDelete();
+        } else {
+            service.mainHandler.post(() -> service.dispatchRemoteKey(key, androidKey));
+        }
         return true;
+    }
+
+    private void queueRemoteDelete() {
+        synchronized (remoteDeleteLock) {
+            pendingRemoteDeletes = Math.min(64, pendingRemoteDeletes + 1);
+            if (remoteDeleteScheduled) return;
+            remoteDeleteScheduled = true;
+        }
+        mainHandler.post(this::drainRemoteDeletes);
+    }
+
+    private void drainRemoteDeletes() {
+        int count;
+        synchronized (remoteDeleteLock) {
+            count = pendingRemoteDeletes;
+            pendingRemoteDeletes = 0;
+            remoteDeleteScheduled = false;
+        }
+        if (count > 0) deleteBackward(count);
     }
 
     private void dispatchRemoteKey(int key, int androidKey) {
