@@ -106,6 +106,14 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_RECENTS));
     }
 
+    public void moveRecents(boolean towardRight) {
+        int width = getScreenWidth();
+        int height = getScreenHeight();
+        float startX = width * (towardRight ? 0.72f : 0.28f);
+        float endX = width * (towardRight ? 0.28f : 0.72f);
+        mainHandler.post(() -> gesture(startX, height * 0.55f, endX, height * 0.55f, 220));
+    }
+
     public void showNotifications() {
         mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS));
     }

@@ -43,7 +43,7 @@ public final class SynerdroidConnectionService extends Service {
     private Thread eventThread;
     private boolean stopping;
     private int generation;
-    private int retrySeconds = 2;
+    private final ReconnectPolicy reconnectPolicy = new ReconnectPolicy(2, 60);
     private String name;
     private String host;
     private int port;
@@ -99,21 +99,22 @@ public final class SynerdroidConnectionService extends Service {
         stopping = false;
         generation++;
         if (previous != null) previous.disconnect(null);
-        retrySeconds = 2;
+        reconnectPolicy.reset();
         setActive(true);
-        startForeground(NOTIFICATION_ID, notification("Connecting to " + host + "&"));
+        startForeground(NOTIFICATION_ID, notification("Connecting to " + host + "..."));
         connectNow(generation);
         return START_REDELIVER_INTENT;
     }
 
     private void connectNow(int expectedGeneration) {
         if (stopping || expectedGeneration != generation) return;
+        startEventLoop();
         if (!Injection.isReady()) {
             report("Cannot reconnect: accessibility service is disabled.");
             stopConnection();
             return;
         }
-        report("Connecting in background to " + host + ":" + port + "&");
+        report("Connecting in background to " + host + ":" + port + "...");
         try {
             SocketFactoryInterface factory = new TCPSocketFactory(tls, fingerprint);
             BasicScreen screen = new BasicScreen();
@@ -137,10 +138,9 @@ public final class SynerdroidConnectionService extends Service {
 
     private void scheduleReconnect(int expectedGeneration) {
         if (stopping || expectedGeneration != generation) return;
-        int delay = retrySeconds;
-        retrySeconds = Math.min(60, retrySeconds * 2);
-        report("Reconnecting in " + delay + " seconds&");
-        updateNotification("Reconnecting to " + host + "&");
+        int delay = reconnectPolicy.nextDelaySeconds();
+        report("Reconnecting in " + delay + " seconds...");
+        updateNotification("Reconnecting to " + host + "...");
         handler.postDelayed(() -> connectNow(expectedGeneration), delay * 1000L);
     }
 
@@ -172,6 +172,7 @@ public final class SynerdroidConnectionService extends Service {
                 }
             } catch (Throwable error) {
                 report("Input loop stopped: " + error);
+                eventThread = null;
                 scheduleReconnect(generation);
             }
         }, "Synerdroid protocol");
@@ -180,7 +181,7 @@ public final class SynerdroidConnectionService extends Service {
 
     private void report(String message) {
         if (message.contains("handshake complete")) {
-            retrySeconds = 2;
+            reconnectPolicy.reset();
             updateNotification("Connected as " + name);
         }
         Listener current = listener;
@@ -204,12 +205,18 @@ public final class SynerdroidConnectionService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 0,
                 new Intent(this, SynerdroidActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent disconnect = PendingIntent.getService(this, 1,
+                new Intent(this, SynerdroidConnectionService.class).setAction(ACTION_DISCONNECT),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
         return builder.setSmallIcon(R.drawable.icon)
                 .setContentTitle("Synerdroid")
                 .setContentText(text)
                 .setContentIntent(open)
+                .addAction(new Notification.Action.Builder(
+                        android.R.drawable.ic_menu_close_clear_cancel,
+                        "Disconnect", disconnect).build())
                 .setOngoing(true)
                 .build();
     }

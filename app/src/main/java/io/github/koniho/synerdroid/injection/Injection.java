@@ -67,6 +67,10 @@ public final class Injection {
             service.showRecents();
             return;
         }
+        if (service != null && alt && isHorizontalArrow(key)) {
+            service.moveRecents(isRightArrow(key));
+            return;
+        }
         if (service != null && alt && shift && (key == 78 || key == 110)) {
             service.showNotifications();
             return;
@@ -79,6 +83,14 @@ public final class Injection {
         return key >= 0xFFE1 && key <= 0xFFEE
                 || key >= 0xEFE1 && key <= 0xEFEE
                 || key == 0xFE03 || key == 0xEE03;
+    }
+
+    private static boolean isHorizontalArrow(int key) {
+        return key == 61265 || key == 65361 || isRightArrow(key);
+    }
+
+    private static boolean isRightArrow(int key) {
+        return key == 61267 || key == 65363;
     }
 
     private static boolean isTab(int key) {
