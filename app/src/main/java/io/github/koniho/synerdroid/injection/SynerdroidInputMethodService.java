@@ -46,6 +46,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     @Override public View onCreateInputView() {
         keyboardView = new LinearLayout(this);
         keyboardView.setOrientation(LinearLayout.VERTICAL);
+        keyboardView.setClipChildren(false);
         keyboardView.setPadding(dp(4), dp(6), dp(4), dp(64));
         keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
         buildKeyboard();
@@ -111,6 +112,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private LinearLayout newRow() {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClipChildren(false);
         row.setGravity(Gravity.CENTER);
         row.setPadding(0, dp(2), 0, dp(2));
         row.setLayoutParams(new LinearLayout.LayoutParams(
@@ -142,7 +144,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         button.setOnTouchListener((view, event) -> {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                view.animate().scaleX(0.92f).scaleY(0.92f).setDuration(45).start();
+                view.animate().scaleX(2f).scaleY(2f).setDuration(70).start();
             } else if (event.getActionMasked() == MotionEvent.ACTION_UP
                     || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
                 view.animate().scaleX(1f).scaleY(1f).setDuration(110).start();
@@ -249,6 +251,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     private void dispatchRemoteKey(int key, int androidKey) {
+        animateRemoteKey(key, androidKey);
         try {
             if (androidKey == KeyEvent.KEYCODE_DEL) {
                 deleteBackward();
@@ -260,6 +263,28 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             }
         } catch (RuntimeException ignored) {
             // A focused editor may close while queued remote input is draining.
+        }
+    }
+
+    private void animateRemoteKey(int key, int androidKey) {
+        if (keyboardView == null) return;
+        String wanted = androidKey == KeyEvent.KEYCODE_DEL ? "\u232b"
+                : new String(Character.toChars(key));
+        for (int rowIndex = 0; rowIndex < keyboardView.getChildCount(); rowIndex++) {
+            View rowView = keyboardView.getChildAt(rowIndex);
+            if (!(rowView instanceof LinearLayout)) continue;
+            LinearLayout row = (LinearLayout) rowView;
+            for (int keyIndex = 0; keyIndex < row.getChildCount(); keyIndex++) {
+                View keyView = row.getChildAt(keyIndex);
+                if (!(keyView instanceof Button)) continue;
+                Button button = (Button) keyView;
+                if (!button.getText().toString().equalsIgnoreCase(wanted)) continue;
+                button.animate().cancel();
+                button.setScaleX(2f);
+                button.setScaleY(2f);
+                button.animate().scaleX(1f).scaleY(1f).setDuration(160).start();
+                return;
+            }
         }
     }
 

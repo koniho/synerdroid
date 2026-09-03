@@ -20,6 +20,7 @@
 package io.github.koniho.synerdroid.client;
 // Modified for Synerdroid by Alexander Ho, 2026.
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -178,6 +179,9 @@ public class ServerProxy {
 	protected Result parseMessage () throws IOException {
 		// Read the header
 		MessageHeader header = new MessageHeader (din);
+        byte[] payload = new byte[header.getDataSize()];
+        din.readFully(payload);
+        DataInputStream message = new DataInputStream(new ByteArrayInputStream(payload));
 		
 		// NOTE: as this is currently designed an improperly consumed message
 		// will break the handling of the next message,  The message data should
@@ -188,39 +192,39 @@ public class ServerProxy {
         case DMOUSEMOVE:
         	// Cut right to the chase with mouse movements since
         	//  they are the most abundant
-            short ax = din.readShort ();
-    		short ay = din.readShort ();
+            short ax = message.readShort ();
+            short ay = message.readShort ();
             client.mouseMove (ax, ay);	
             break;
 
         case DMOUSERELMOVE:
-            short rx = din.readShort ();
-    		short ry = din.readShort ();
+            short rx = message.readShort ();
+            short ry = message.readShort ();
             client.relMouseMove(rx, ry);	
             break;
 
         case DMOUSEWHEEL:
-			mouseWheel (new MouseWheelMessage (din));
+			mouseWheel (new MouseWheelMessage (message));
             break;
 
 		case DKEYDOWN:
-		    keyDown (new KeyDownMessage(din));
+		    keyDown (new KeyDownMessage(message));
             break;
 
 		case DKEYUP:
-			keyUp (new KeyUpMessage(din));
+			keyUp (new KeyUpMessage(message));
             break;
 		
         case DKEYREPEAT:
-			keyRepeat (new KeyRepeatMessage (din));
+			keyRepeat (new KeyRepeatMessage (message));
             break;
 
         case DMOUSEDOWN:
-            mouseDown (new MouseDownMessage (din));
+            mouseDown (new MouseDownMessage (message));
             break;
 
         case DMOUSEUP:
-            mouseUp (new MouseUpMessage (din));
+            mouseUp (new MouseUpMessage (message));
             break;
 
 		case CKEEPALIVE:
@@ -234,20 +238,20 @@ public class ServerProxy {
 			break;
 
         case CENTER:
-			enter (new EnterMessage (header, din));
+			enter (new EnterMessage (header, message));
 			break;
 
         case CLEAVE:
-			leave (new LeaveMessage (din));
+			leave (new LeaveMessage (message));
 			break;
 
 		case CCLIPBOARD:
-			grabClipboard (new ClipboardMessage (din));
+			grabClipboard (new ClipboardMessage (message));
 			break;
 
 		case CSCREENSAVER:
-			byte screenSaverOnFlag = din.readByte();
-			screensaver (new ScreenSaverMessage (din, screenSaverOnFlag));
+			byte screenSaverOnFlag = message.readByte();
+			screensaver (new ScreenSaverMessage (message, screenSaverOnFlag));
 			break;
 
 		case QINFO:
@@ -255,21 +259,21 @@ public class ServerProxy {
 			break;
 
 		case CINFOACK:
-			//infoAcknowledgment (new InfoAckMessage (din));
+			//infoAcknowledgment (new InfoAckMessage (message));
 			infoAcknowledgment ();
 			
 			break;
 
         case DCLIPBOARD:
-			setClipboard (new ClipboardDataMessage (header, din));
+			setClipboard (new ClipboardDataMessage (header, message));
 			break;
 
 		case CRESETOPTIONS:
-			resetOptions (new ResetOptionsMessage (din));
+			resetOptions (new ResetOptionsMessage (message));
 			break;
 
         case DSETOPTIONS:
-			SetOptionsMessage setOptionsMessage = new SetOptionsMessage (header, din);
+			SetOptionsMessage setOptionsMessage = new SetOptionsMessage (header, message);
 			setOptions (setOptionsMessage);
 			break;
 
