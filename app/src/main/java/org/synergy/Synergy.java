@@ -40,6 +40,7 @@ public class Synergy extends Activity {
     private static final String PROP_TLS_ENABLED = "tlsEnabled";
     private static final String PROP_TLS_FINGERPRINT = "tlsFingerprint";
     private static final String PROP_POINTER_SPEED = "pointerSpeed";
+    private static final String PROP_INVERT_SCROLL = "invertScroll";
 
     private Thread mainLoopThread;
     private TextView statusView;
@@ -88,6 +89,13 @@ public class Synergy extends Activity {
         SeekBar pointerSpeed = findViewById(R.id.pointerSpeedSeekBar);
         pointerSpeed.setProgress(preferences.getInt(PROP_POINTER_SPEED, 75));
         updatePointerSpeed(pointerSpeed.getProgress());
+        CheckBox invertScroll = findViewById(R.id.invertScrollCheckBox);
+        invertScroll.setChecked(preferences.getBoolean(PROP_INVERT_SCROLL, false));
+        Injection.setInvertScroll(invertScroll.isChecked());
+        invertScroll.setOnCheckedChangeListener((button, checked) -> {
+            Injection.setInvertScroll(checked);
+            saveSettings();
+        });
         pointerSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
              public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 updatePointerSpeed(progress);
@@ -240,6 +248,7 @@ public class Synergy extends Activity {
                 .putBoolean(PROP_TLS_ENABLED, ((CheckBox) findViewById(R.id.tlsCheckBox)).isChecked())
                 .putString(PROP_TLS_FINGERPRINT, textOf(R.id.tlsFingerprintEditText))
                 .putInt(PROP_POINTER_SPEED, ((SeekBar) findViewById(R.id.pointerSpeedSeekBar)).getProgress())
+                .putBoolean(PROP_INVERT_SCROLL, ((CheckBox) findViewById(R.id.invertScrollCheckBox)).isChecked())
                 .apply();
     }
 

@@ -11,6 +11,7 @@ public final class Injection {
     private static float pointerSpeed = 1.25f;
     private static float remainderX;
     private static float remainderY;
+    private static boolean invertScroll;
 
     private Injection() { }
 
@@ -18,6 +19,10 @@ public final class Injection {
 
     public static boolean isReady() {
         return SynergyAccessibilityService.isReady();
+    }
+
+    public static void setInvertScroll(boolean invert) {
+        invertScroll = invert;
     }
 
     public static void setPointerSpeed(float speed) {
@@ -118,6 +123,6 @@ public final class Injection {
 
     public static void mousewheel(int x, int y) {
         SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
-        if (service != null) service.scroll(pointerX, pointerY, y);
+        if (service != null) service.scroll(pointerX, pointerY, invertScroll ? -y : y);
     }
 }

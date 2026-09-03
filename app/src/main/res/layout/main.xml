@@ -99,6 +99,13 @@
             android:max="150"
             android:progress="75" />
 
+        <CheckBox
+            android:id="@+id/invertScrollCheckBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/invert_scroll" />
+
         <Button
             android:id="@+id/accessibilityButton"
             style="@style/Synergy.SecondaryButton"
