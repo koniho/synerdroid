@@ -8,6 +8,9 @@ public final class Injection {
     private static int pressY;
     private static int pressedButton = -1;
     private static boolean screenFocused;
+    private static float pointerSpeed = 1.25f;
+    private static float remainderX;
+    private static float remainderY;
 
     private Injection() { }
 
@@ -17,9 +20,14 @@ public final class Injection {
         return SynergyAccessibilityService.isReady();
     }
 
+    public static void setPointerSpeed(float speed) {
+        pointerSpeed = Math.max(0.5f, Math.min(2.0f, speed));
+    }
+
     public static void startInjection(String ignoredDeviceName) {
         pointerX = 0;
         pointerY = 0;
+        remainderX = remainderY = 0f;
         pressedButton = -1;
         screenFocused = false;
         hidePointer();
@@ -69,8 +77,14 @@ public final class Injection {
     public static void movemouse(int dx, int dy) {
         SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
         if (service == null) return;
-        pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, pointerX + dx));
-        pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + dy));
+        float scaledX = dx * pointerSpeed + remainderX;
+        float scaledY = dy * pointerSpeed + remainderY;
+        int moveX = Math.round(scaledX);
+        int moveY = Math.round(scaledY);
+        remainderX = scaledX - moveX;
+        remainderY = scaledY - moveY;
+        pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, pointerX + moveX));
+        pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + moveY));
         if (screenFocused) service.movePointer(pointerX, pointerY);
     }
 

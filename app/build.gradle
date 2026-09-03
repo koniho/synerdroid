@@ -10,8 +10,8 @@ android {
         applicationId 'org.synergy'
         minSdk 24
         targetSdk 35
-        versionCode 18
-        versionName '0.0021'
+        versionCode 20
+        versionName '0.0023'
     }
 
     compileOptions {

@@ -9,6 +9,7 @@
     <string name="use_tls">Use TLS</string>
     <string name="tls_fingerprint">Server certificate</string>
     <string name="tls_fingerprint_hint">SHA-256 fingerprint</string>
+    <string name="pointer_speed">Pointer speed</string>
     <string name="connect">Connect</string>
     <string name="keyboard_settings">Keyboard settings</string>
     <string name="ime_service_name">Synergy Keyboard</string>

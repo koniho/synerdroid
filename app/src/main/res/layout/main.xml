@@ -70,6 +70,35 @@
             android:inputType="textNoSuggestions|textCapCharacters"
             android:maxLines="3" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/pointer_speed"
+                android:textAppearance="@style/TextAppearance.Synergy.Section" />
+
+            <TextView
+                android:id="@+id/pointerSpeedValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.25×"
+                android:textColor="@color/synergy_on_surface" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/pointerSpeedSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="150"
+            android:progress="75" />
+
         <Button
             android:id="@+id/accessibilityButton"
             style="@style/Synergy.SecondaryButton"

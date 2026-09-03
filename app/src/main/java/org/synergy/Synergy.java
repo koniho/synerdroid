@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.SeekBar;
 import android.widget.Toast;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -38,6 +39,7 @@ public class Synergy extends Activity {
     private static final String PROP_SERVER_HOST = "serverHost";
     private static final String PROP_TLS_ENABLED = "tlsEnabled";
     private static final String PROP_TLS_FINGERPRINT = "tlsFingerprint";
+    private static final String PROP_POINTER_SPEED = "pointerSpeed";
 
     private Thread mainLoopThread;
     private TextView statusView;
@@ -83,6 +85,16 @@ public class Synergy extends Activity {
                 preferences.getBoolean(PROP_TLS_ENABLED, true));
         setTextIfPresent(R.id.tlsFingerprintEditText,
                 preferences.getString(PROP_TLS_FINGERPRINT, ""));
+        SeekBar pointerSpeed = findViewById(R.id.pointerSpeedSeekBar);
+        pointerSpeed.setProgress(preferences.getInt(PROP_POINTER_SPEED, 75));
+        updatePointerSpeed(pointerSpeed.getProgress());
+        pointerSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                updatePointerSpeed(progress);
+            }
+             public void onStartTrackingTouch(SeekBar seekBar) { }
+             public void onStopTrackingTouch(SeekBar seekBar) { saveSettings(); }
+        });
 
         findViewById(R.id.accessibilityButton).setOnClickListener(view ->
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
@@ -103,6 +115,13 @@ public class Synergy extends Activity {
                     ? "Accessibility service is enabled."
                     : "Accessibility service is not enabled.");
         }
+    }
+
+    private void updatePointerSpeed(int progress) {
+        float speed = 0.5f + progress / 100f;
+        Injection.setPointerSpeed(speed);
+        ((TextView) findViewById(R.id.pointerSpeedValue)).setText(
+                String.format(java.util.Locale.US, "%.2f×", speed));
     }
 
     private void configureKeyboard() {
@@ -220,6 +239,7 @@ public class Synergy extends Activity {
                 .putString(PROP_SERVER_HOST, textOf(R.id.serverHostEditText))
                 .putBoolean(PROP_TLS_ENABLED, ((CheckBox) findViewById(R.id.tlsCheckBox)).isChecked())
                 .putString(PROP_TLS_FINGERPRINT, textOf(R.id.tlsFingerprintEditText))
+                .putInt(PROP_POINTER_SPEED, ((SeekBar) findViewById(R.id.pointerSpeedSeekBar)).getProgress())
                 .apply();
     }
 
