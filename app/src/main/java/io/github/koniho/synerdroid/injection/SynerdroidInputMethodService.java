@@ -21,7 +21,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
-import android.widget.Space;
 
 import io.github.koniho.synerdroid.diagnostics.CrashReporter;
 
@@ -104,12 +103,12 @@ public final class SynerdroidInputMethodService extends InputMethodService {
 
     private void addTextRow(String characters, float leftWeight, float rightWeight) {
         LinearLayout row = newRow();
-        Space left = leftWeight > 0f ? spacer(leftWeight) : null;
+        View left = leftWeight > 0f ? spacer(leftWeight) : null;
         if (left != null) row.addView(left);
         addCharacters(row, characters);
         if (left != null) forwardTouches(left);
         if (rightWeight > 0f) {
-            Space right = spacer(rightWeight);
+            View right = spacer(rightWeight);
             forwardTouches(right);
             row.addView(right);
         }
@@ -127,8 +126,8 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         }
     }
 
-    private Space spacer(float weight) {
-        Space space = new Space(this);
+    private View spacer(float weight) {
+        View space = new View(this);
         space.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.MATCH_PARENT, weight));
         return space;
