@@ -4,6 +4,8 @@ package io.github.koniho.synerdroid.injection;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.inputmethodservice.InputMethodService;
+import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -12,6 +14,8 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Space;
+
+import io.github.koniho.synerdroid.diagnostics.CrashReporter;
 
 /** Synergy's remote-input bridge with a compact fallback on-screen keyboard. */
 public final class SynerdroidInputMethodService extends InputMethodService {
@@ -24,6 +28,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
 
     @Override public void onCreate() {
         super.onCreate();
+        CrashReporter.install(this);
         instance = this;
     }
 
@@ -55,7 +60,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             LinearLayout letters = newRow();
             letters.addView(key("\u21e7", 1.55f, view -> toggleShift(), true));
             addCharacters(letters, "zxcvbnm");
-            letters.addView(key("\u232b", 1.55f, view -> sendAndroidKey(KeyEvent.KEYCODE_DEL), true));
+            letters.addView(key("\u232b", 1.55f, view -> deleteBackward(), true));
             keyboardView.addView(letters);
         }
         LinearLayout bottom = newRow();
@@ -127,6 +132,17 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         params.setMargins(dp(3), 0, dp(3), 0);
         button.setLayoutParams(params);
         button.setOnClickListener(listener);
+        button.setHapticFeedbackEnabled(true);
+        button.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                view.animate().scaleX(0.92f).scaleY(0.92f).setDuration(45).start();
+            } else if (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                view.animate().scaleX(1f).scaleY(1f).setDuration(110).start();
+            }
+            return false;
+        });
         return button;
     }
 
@@ -154,6 +170,25 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         if (input != null) input.commitText(text, 1);
     }
 
+    private void deleteBackward() {
+        InputConnection input = getCurrentInputConnection();
+        if (input == null) return;
+        try {
+            input.beginBatchEdit();
+            CharSequence selected = input.getSelectedText(0);
+            if (selected != null && selected.length() > 0) {
+                input.commitText("", 1);
+            } else if (!input.deleteSurroundingText(1, 0)) {
+                input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+                input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+            }
+        } catch (RuntimeException ignored) {
+            // The target editor may disappear while a key is being handled.
+        } finally {
+            try { input.endBatchEdit(); } catch (RuntimeException ignored) { }
+        }
+    }
+
     private void sendAndroidKey(int keyCode) {
         InputConnection input = getCurrentInputConnection();
         if (input == null) return;
@@ -177,6 +212,10 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         if (input == null) return false;
 
         int androidKey = mapSpecialKey(key);
+        if (androidKey == KeyEvent.KEYCODE_DEL) {
+            service.deleteBackward();
+            return true;
+        }
         if (androidKey != KeyEvent.KEYCODE_UNKNOWN) {
             input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, androidKey));
             input.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, androidKey));
