@@ -10,6 +10,8 @@
     <string name="tls_fingerprint">Server certificate</string>
     <string name="tls_fingerprint_hint">SHA-256 fingerprint</string>
     <string name="connect">Connect</string>
+    <string name="keyboard_settings">Keyboard settings</string>
+    <string name="ime_service_name">Synergy Keyboard</string>
     <string name="connection_log">Connection log</string>
     <string name="status_idle">Ready. Configure the server and connect.</string>
     <string name="accessibility_service_name">Synergy input control</string>

@@ -77,6 +77,12 @@
             android:text="@string/enable_accessibility" />
 
         <Button
+            android:id="@+id/keyboardButton"
+            style="@style/Synergy.SecondaryButton"
+            android:layout_marginTop="12dp"
+            android:text="@string/keyboard_settings" />
+
+        <Button
             android:id="@+id/connectButton"
             style="@style/Synergy.PrimaryButton"
             android:layout_marginTop="12dp"

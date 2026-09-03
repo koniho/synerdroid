@@ -50,7 +50,7 @@ public final class SynergyAccessibilityService extends AccessibilityService {
         mainHandler.post(() -> {
             if (cursorView == null || cursorParams == null) return;
             cursorParams.x = x;
-            cursorParams.y = y;
+            cursorParams.y = y - getOverlayTopInset();
             cursorView.setVisibility(android.view.View.VISIBLE);
             windowManager.updateViewLayout(cursorView, cursorParams);
         });
@@ -73,6 +73,12 @@ public final class SynergyAccessibilityService extends AccessibilityService {
         windowManager.addView(cursorView, cursorParams);
     }
 
+    private int getOverlayTopInset() {
+        if (cursorView == null || cursorView.getRootWindowInsets() == null) return 0;
+        return cursorView.getRootWindowInsets()
+                .getSystemWindowInsetTop();
+    }
+
     private void removeCursorOverlay() {
         if (windowManager != null && cursorView != null) {
             try { windowManager.removeView(cursorView); } catch (RuntimeException ignored) { }
@@ -84,6 +90,14 @@ public final class SynergyAccessibilityService extends AccessibilityService {
     public void click(int x, int y, int buttonId) {
         if (buttonId != 1 && buttonId != 0) return;
         mainHandler.post(() -> gesture(x, y, x, y, 1));
+    }
+
+    public void drag(int startX, int startY, int endX, int endY) {
+        mainHandler.post(() -> gesture(startX, startY, endX, endY, 450));
+    }
+
+    public void goBack() {
+        mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_BACK));
     }
 
     public void scroll(int x, int y, int amount) {
@@ -107,7 +121,7 @@ public final class SynergyAccessibilityService extends AccessibilityService {
     }
 
     private void handleKey(int key) {
-        if (key == 27 || key == 61211) {
+        if (key == 27 || key == 61211 || key == 65288 || key == 65307 || key == 269025062) {
             performGlobalAction(GLOBAL_ACTION_BACK);
             return;
         }

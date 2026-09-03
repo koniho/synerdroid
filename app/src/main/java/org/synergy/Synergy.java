@@ -11,6 +11,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.view.inputmethod.InputMethodInfo;
+import android.view.inputmethod.InputMethodManager;
 
 import org.synergy.base.Event;
 import org.synergy.base.EventQueue;
@@ -84,6 +86,7 @@ public class Synergy extends Activity {
 
         findViewById(R.id.accessibilityButton).setOnClickListener(view ->
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        findViewById(R.id.keyboardButton).setOnClickListener(view -> configureKeyboard());
         connectButton.setOnClickListener(view -> connect());
         Log.setLogLevel(Log.Level.INFO);
     }
@@ -99,6 +102,24 @@ public class Synergy extends Activity {
             appendStatus(Injection.isReady()
                     ? "Accessibility service is enabled."
                     : "Accessibility service is not enabled.");
+        }
+    }
+
+    private void configureKeyboard() {
+        InputMethodManager manager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        boolean enabled = false;
+        for (InputMethodInfo info : manager.getEnabledInputMethodList()) {
+            if (getPackageName().equals(info.getPackageName())) {
+                enabled = true;
+                break;
+            }
+        }
+        if (enabled) {
+            appendStatus("Choose Synergy Keyboard in the keyboard picker.");
+            manager.showInputMethodPicker();
+        } else {
+            appendStatus("Enable Synergy Keyboard, return here, then tap Keyboard settings again to select it.");
+            startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
         }
     }
 

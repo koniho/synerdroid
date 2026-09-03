@@ -20,6 +20,19 @@
         </activity>
 
         <service
+            android:name=".injection.SynergyInputMethodService"
+            android:exported="true"
+            android:label="@string/ime_service_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/input_method_config" />
+        </service>
+
+        <service
             android:name=".injection.SynergyAccessibilityService"
             android:description="@string/accessibility_description"
             android:exported="true"
