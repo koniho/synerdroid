@@ -1,6 +1,8 @@
 package io.github.koniho.synerdroid.injection;
 // Modified for Synerdroid by Alexander Ho, 2026.
 
+import android.animation.ArgbEvaluator;
+import android.animation.ValueAnimator;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.InsetDrawable;
@@ -23,6 +25,9 @@ import android.widget.Space;
 
 import io.github.koniho.synerdroid.diagnostics.CrashReporter;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 /** Synergy's remote-input bridge with a compact fallback on-screen keyboard. */
 public final class SynerdroidInputMethodService extends InputMethodService {
     private static volatile SynerdroidInputMethodService instance;
@@ -34,6 +39,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private Runnable repeatingKey;
     private Button forwardedTouchKey;
     private final Runnable hidePreview = this::dismissKeyPreview;
+    private final Map<Button, ValueAnimator> keyHighlights = new WeakHashMap<>();
     private LinearLayout keyboardView;
     private boolean shifted;
     private boolean symbols;
@@ -232,6 +238,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         background.setColor(special ? Color.rgb(47, 70, 82) : Color.rgb(40, 50, 56));
         background.setCornerRadius(dp(10));
         button.setBackground(new InsetDrawable(background, dp(3), dp(2), dp(3), dp(2)));
+        button.setTag(background);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.MATCH_PARENT, weight);
         params.setMargins(0, 0, 0, 0);
@@ -244,6 +251,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             boolean repeatable = isRepeatable(text);
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                highlightKey(touched);
                 showKeyPreview(touched, text);
                 if (repeatable) {
                     touched.performClick();
@@ -268,6 +276,25 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             return true;
         });
         return button;
+    }
+
+    private void highlightKey(Button button) {
+        Object tag = button.getTag();
+        if (!(tag instanceof GradientDrawable)) return;
+        ValueAnimator previous = keyHighlights.remove(button);
+        if (previous != null) previous.cancel();
+        boolean special = button.getText().length() > 1
+                || button.getText().toString().equals("\u21e7")
+                || button.getText().toString().equals("\u21b5")
+                || button.getText().toString().equals("\u232b");
+        int base = special ? Color.rgb(47, 70, 82) : Color.rgb(40, 50, 56);
+        int accent = Color.rgb(167, 128, 255);
+        GradientDrawable shape = (GradientDrawable) tag;
+        ValueAnimator animator = ValueAnimator.ofObject(new ArgbEvaluator(), base, accent, base);
+        animator.setDuration(240);
+        animator.addUpdateListener(value -> shape.setColor((Integer) value.getAnimatedValue()));
+        keyHighlights.put(button, animator);
+        animator.start();
     }
 
     private boolean isRepeatable(String label) {
@@ -424,7 +451,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private void animateRemoteKey(int key, int androidKey) {
         if (keyboardView == null) return;
         String wanted = androidKey == KeyEvent.KEYCODE_DEL ? "\u232b"
-                : new String(Character.toChars(key));
+                : key == 32 ? "space" : new String(Character.toChars(key));
         for (int rowIndex = 0; rowIndex < keyboardView.getChildCount(); rowIndex++) {
             View rowView = keyboardView.getChildAt(rowIndex);
             if (!(rowView instanceof LinearLayout)) continue;
@@ -434,6 +461,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
                 if (!(keyView instanceof Button)) continue;
                 Button button = (Button) keyView;
                 if (!button.getText().toString().equalsIgnoreCase(wanted)) continue;
+                highlightKey(button);
                 showKeyPreview(button, button.getText().toString());
                 mainHandler.removeCallbacks(hidePreview);
                 mainHandler.postDelayed(hidePreview, 180);
