@@ -4,6 +4,7 @@ package io.github.koniho.synerdroid.injection;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.InsetDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +17,8 @@ import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Space;
 
 import io.github.koniho.synerdroid.diagnostics.CrashReporter;
@@ -27,6 +30,9 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     private final Object remoteDeleteLock = new Object();
     private int pendingRemoteDeletes;
     private boolean remoteDeleteScheduled;
+    private PopupWindow keyPreview;
+    private Runnable repeatingKey;
+    private final Runnable hidePreview = this::dismissKeyPreview;
     private LinearLayout keyboardView;
     private boolean shifted;
     private boolean symbols;
@@ -60,7 +66,11 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             addTextRow("1234567890", 0f, 0f);
             addTextRow("@#$_&-+()/", 0f, 0f);
             addTextRow("*\"':;!?%", 0.5f, 0.5f);
-            addTextRow("[]{}<>\\=", 0.6f, 0.6f);
+            LinearLayout symbolsLast = newRow();
+            symbolsLast.addView(spacer(0.45f));
+            addCharacters(symbolsLast, "[]{}<>\\=");
+            symbolsLast.addView(key("\u232b", 1.55f, view -> deleteBackward(), true));
+            keyboardView.addView(symbolsLast);
         } else {
             addTextRow("1234567890", 0f, 0f);
             addTextRow("qwertyuiop", 0f, 0f);
@@ -143,18 +153,74 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         button.setOnClickListener(listener);
         button.setHapticFeedbackEnabled(true);
         button.setOnTouchListener((view, event) -> {
+            Button touched = (Button) view;
+            String text = touched.getText().toString();
+            boolean repeatable = isRepeatable(text);
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                view.setTranslationZ(dp(16));
-                view.animate().scaleX(2f).scaleY(2f).setDuration(70).start();
+                showKeyPreview(touched, text);
+                if (repeatable) {
+                    touched.performClick();
+                    repeatingKey = new Runnable() {
+                        @Override public void run() {
+                            if (repeatingKey != this) return;
+                            touched.performClick();
+                            touched.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                            mainHandler.postDelayed(this, 65);
+                        }
+                    };
+                    mainHandler.postDelayed(repeatingKey, 400);
+                }
             } else if (event.getActionMasked() == MotionEvent.ACTION_UP
                     || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-                view.animate().scaleX(1f).scaleY(1f).translationZ(0f)
-                        .setDuration(110).start();
+                if (!repeatable && event.getActionMasked() == MotionEvent.ACTION_UP) {
+                    touched.performClick();
+                }
+                stopKeyRepeat();
+                dismissKeyPreview();
             }
-            return false;
+            return true;
         });
         return button;
+    }
+
+    private boolean isRepeatable(String label) {
+        return label.length() == 1 && !label.equals("\u21e7") && !label.equals("\u21b5")
+                || label.equals("\u232b");
+    }
+
+    private void stopKeyRepeat() {
+        Runnable repeat = repeatingKey;
+        repeatingKey = null;
+        if (repeat != null) mainHandler.removeCallbacks(repeat);
+    }
+
+    private void showKeyPreview(Button anchor, String label) {
+        dismissKeyPreview();
+        if (label.length() != 1) return;
+        TextView preview = new TextView(this);
+        preview.setText(label);
+        preview.setTextSize(28);
+        preview.setTextColor(Color.WHITE);
+        preview.setGravity(Gravity.CENTER);
+        GradientDrawable bubble = new GradientDrawable();
+        bubble.setShape(GradientDrawable.OVAL);
+        bubble.setColor(Color.rgb(75, 92, 102));
+        preview.setBackground(bubble);
+        int size = dp(60);
+        keyPreview = new PopupWindow(preview, size, size, false);
+        keyPreview.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        keyPreview.setClippingEnabled(false);
+        keyPreview.setElevation(dp(12));
+        keyPreview.showAsDropDown(anchor, (anchor.getWidth() - size) / 2,
+                -anchor.getHeight() - size - dp(8));
+    }
+
+    private void dismissKeyPreview() {
+        if (keyPreview != null) {
+            keyPreview.dismiss();
+            keyPreview = null;
+        }
     }
 
     private void toggleShift() {
@@ -282,12 +348,9 @@ public final class SynerdroidInputMethodService extends InputMethodService {
                 if (!(keyView instanceof Button)) continue;
                 Button button = (Button) keyView;
                 if (!button.getText().toString().equalsIgnoreCase(wanted)) continue;
-                button.animate().cancel();
-                button.setTranslationZ(dp(16));
-                button.setScaleX(2f);
-                button.setScaleY(2f);
-                button.animate().scaleX(1f).scaleY(1f).translationZ(0f)
-                        .setDuration(160).start();
+                showKeyPreview(button, button.getText().toString());
+                mainHandler.removeCallbacks(hidePreview);
+                mainHandler.postDelayed(hidePreview, 180);
                 return;
             }
         }
