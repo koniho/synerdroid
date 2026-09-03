@@ -46,6 +46,8 @@ public class SynerdroidActivity extends Activity {
     private Thread mainLoopThread;
     private TextView statusView;
     private Button connectButton;
+    private Button disconnectButton;
+    private volatile Client currentClient;
 
     private final class MainLoopThread extends Thread {
         @Override public void run() {
@@ -77,6 +79,8 @@ public class SynerdroidActivity extends Activity {
             statusView.append("\n\nPREVIOUS CRASH\n" + previousCrash);
         }
         connectButton = findViewById(R.id.connectButton);
+        disconnectButton = findViewById(R.id.disconnectButton);
+        disconnectButton.setEnabled(false);
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         setTextIfPresent(R.id.clientNameEditText,
@@ -109,6 +113,7 @@ public class SynerdroidActivity extends Activity {
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         findViewById(R.id.keyboardButton).setOnClickListener(view -> configureKeyboard());
         connectButton.setOnClickListener(view -> connect());
+        disconnectButton.setOnClickListener(view -> disconnect());
         Log.setLogLevel(Log.Level.INFO);
     }
 
@@ -228,7 +233,9 @@ public class SynerdroidActivity extends Activity {
             screen.setShape(metrics.widthPixels, metrics.heightPixels);
 
             Client client = new Client(getApplicationContext(), clientName, serverAddress,
-                    socketFactory, null, screen, this::appendStatus);
+                    socketFactory, null, screen, this::appendStatus, this::onDisconnected);
+            currentClient = client;
+            disconnectButton.setEnabled(true);
             new SynergyConnectTask().execute(client);
 
             if (mainLoopThread == null) {
@@ -239,6 +246,19 @@ public class SynerdroidActivity extends Activity {
             appendStatus("Connection failed: " + error.getMessage());
             connectButton.setEnabled(true);
         }
+    }
+
+    private void disconnect() {
+        Client client = currentClient;
+        if (client != null) client.disconnect(null);
+    }
+
+    private void onDisconnected() {
+        runOnUiThread(() -> {
+            currentClient = null;
+            connectButton.setEnabled(true);
+            disconnectButton.setEnabled(false);
+        });
     }
 
     private void saveSettings() {

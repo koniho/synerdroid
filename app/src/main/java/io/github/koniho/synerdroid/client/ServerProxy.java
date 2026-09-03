@@ -150,6 +150,20 @@ public class ServerProxy {
 		case CRESETOPTIONS:
 			resetOptions (new ResetOptionsMessage (din));
 			break;
+        case EUNKNOWN:
+            client.disconnect("Server rejected this client name. Check that it exactly matches the configured screen name.");
+            return Result.DISCONNECT;
+        case EBUSY:
+            client.disconnect("A client with this screen name is already connected.");
+            return Result.DISCONNECT;
+        case EINCOMPATIBLE:
+            int major = din.readUnsignedShort();
+            int minor = din.readUnsignedShort();
+            client.disconnect("Incompatible Synergy protocol; server requires " + major + "." + minor + ".");
+            return Result.DISCONNECT;
+        case EBAD:
+            client.disconnect("Server reported a protocol error during handshake.");
+            return Result.DISCONNECT;
 		default:
 			return Result.UNKNOWN;
 		}
@@ -262,12 +276,12 @@ public class ServerProxy {
 		case CCLOSE:
 			// server wants us to hangup
 			Log.debug1 ("recv close");
-			// client.disconnect (null);
+			client.disconnect (null);
 			return Result.DISCONNECT;
 
         case EBAD:
 			Log.error ("server disconnected due to a protocol error");
-			// client.disconnect("server reported a protocol error");
+			client.disconnect("server reported a protocol error");
 			return Result.DISCONNECT;
 
         default: 
@@ -292,6 +306,7 @@ public class ServerProxy {
 					break;
 				case UNKNOWN:
 					Log.error ("invalid message from server");
+                    client.disconnect("Server sent an unsupported protocol message.");
 					return;
 				case DISCONNECT:
 					return;
@@ -299,9 +314,16 @@ public class ServerProxy {
 			}
 		} catch (IOException e) {
 			e.printStackTrace ();
+            client.disconnect("Connection closed: " + (e.getMessage() == null ? "end of stream" : e.getMessage()));
 			// TODO
 		}
 	}
+
+    public void stop() {
+        if (keepAliveAlarmTimer != null) keepAliveAlarmTimer.cancel();
+        keepAliveAlarmTimer = null;
+        EventQueue.getInstance().removeHandler(EventType.STREAM_INPUT_READY, stream.getEventTarget());
+    }
 
 	private void resetKeepAliveAlarm () {
         if (keepAliveAlarmTimer != null) {
@@ -347,6 +369,7 @@ public class ServerProxy {
 		} catch (Exception e) {
 			// TODO
 			e.printStackTrace ();
+            client.disconnect("Connection closed: " + (e.getMessage() == null ? "end of stream" : e.getMessage()));
 		}
 	}
 

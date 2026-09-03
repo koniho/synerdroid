@@ -12,6 +12,7 @@
     <string name="pointer_speed">Pointer speed</string>
     <string name="invert_scroll">Invert scroll direction</string>
     <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
     <string name="keyboard_settings">Keyboard settings</string>
     <string name="ime_service_name">Synerdroid Keyboard</string>
     <string name="connection_log">Connection log</string>

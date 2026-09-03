@@ -40,6 +40,7 @@ import io.github.koniho.synerdroid.io.msgs.LeaveMessage;
 import io.github.koniho.synerdroid.net.DataSocketInterface;
 import io.github.koniho.synerdroid.net.NetworkAddress;
 import io.github.koniho.synerdroid.net.SocketFactoryInterface;
+import io.github.koniho.synerdroid.injection.Injection;
 
 import android.content.Context;
 import android.graphics.Point;
@@ -53,6 +54,8 @@ public class Client implements EventTarget {
 	private String name;
 	private NetworkAddress serverAddress;
 	private Stream stream;
+    private DataSocketInterface socket;
+    private volatile boolean disconnected;
 	private SocketFactoryInterface socketFactory;
 	private StreamFilterFactoryInterface streamFilterFactory;
 	private ScreenInterface screen;
@@ -62,10 +65,11 @@ public class Client implements EventTarget {
 	
 	private ServerProxy server;
 	private final StatusListener statusListener;
+    private final Runnable disconnectedListener;
 
 	public Client (final Context context, final String name, final NetworkAddress serverAddress,
 			SocketFactoryInterface socketFactory, StreamFilterFactoryInterface streamFilterFactory,
-			ScreenInterface screen, StatusListener statusListener) {
+			ScreenInterface screen, StatusListener statusListener, Runnable disconnectedListener) {
 		
 		this.context = context;
 		this.name = name;
@@ -74,6 +78,7 @@ public class Client implements EventTarget {
 		this.streamFilterFactory = streamFilterFactory;
 		this.screen = screen;
 		this.statusListener = statusListener;
+        this.disconnectedListener = disconnectedListener;
 		
         assert (socketFactory != null);
         assert (screen != null);
@@ -102,7 +107,7 @@ public class Client implements EventTarget {
 			}
 			
             // create the socket
-	        DataSocketInterface socket = socketFactory.create ();
+	        socket = socketFactory.create ();
     
             // filter socket messages, including a packetizing filter
             stream = socket;
@@ -126,23 +131,27 @@ public class Client implements EventTarget {
 			final String errorMessage = "Failed to connect to " + serverAddress.getHostname()
 					+ ":" + serverAddress.getPort();
 			Log.error(errorMessage);
-            reportStatus(errorMessage + ": " + deepestMessage(e));
+            disconnect(errorMessage + ": " + deepestMessage(e));
 			//final Toast toast = Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT);
 			//toast.show();
 		}
 	}
 	
-	public void disconnect (String msg) {
-		reportStatus(msg == null ? "Disconnected." : "Disconnected: " + msg);
-		cleanupTimer ();
-		cleanupScreen ();
-		cleanupConnecting ();
-		if (msg != null) {
-			sendConnectionFailedEvent (msg);
-		} else {
-			sendEvent (EventType.CLIENT_DISCONNECTED, null);
-		}
-	}
+	public synchronized void disconnect (String msg) {
+        if (disconnected) return;
+        disconnected = true;
+        reportStatus(msg == null ? "Disconnected." : "Disconnected: " + msg);
+        cleanupTimer();
+        cleanupScreen();
+        if (stream != null) EventQueue.getInstance().removeHandlers(stream.getEventTarget());
+        if (socket != null) socket.close();
+        socket = null;
+        stream = null;
+        Injection.stop();
+        if (disconnectedListener != null) disconnectedListener.run();
+    }
+
+    public boolean isDisconnected() { return disconnected; }
 		
     private void reportStatus(String message) {
         if (statusListener != null) statusListener.onStatus(message);
@@ -237,6 +246,7 @@ public class Client implements EventTarget {
 
         } catch (Exception e) {
             e.printStackTrace ();
+            disconnect("Handshake failed: " + deepestMessage(e));
         }
     }
 
@@ -293,7 +303,9 @@ public class Client implements EventTarget {
     }
     
     private void cleanupScreen () {
-    	// TODO/
+        if (server != null) server.stop();
+        server = null;
+        screen.disable();
     }
 
     public Object getEventTarget () {
