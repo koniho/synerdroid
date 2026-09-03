@@ -76,7 +76,9 @@ public final class Injection {
     }
 
     public static boolean isModifierKey(int key) {
-        return key >= 0xFFE1 && key <= 0xFFEE || key == 0xFE03;
+        return key >= 0xFFE1 && key <= 0xFFEE
+                || key >= 0xEFE1 && key <= 0xEFEE
+                || key == 0xFE03 || key == 0xEE03;
     }
 
     private static boolean isTab(int key) {

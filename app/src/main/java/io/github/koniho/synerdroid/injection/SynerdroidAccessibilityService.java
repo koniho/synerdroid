@@ -152,7 +152,9 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
             next = current.isEmpty() ? current : current.substring(0, current.offsetByCodePoints(current.length(), -1));
         } else if (key == 10 || key == 13 || key == 61197) {
             next = current + "\n";
-        } else if (key >= 32 && key <= Character.MAX_CODE_POINT && Character.isValidCodePoint(key)) {
+        } else if (key >= 32 && key <= Character.MAX_CODE_POINT
+                && !(key >= 0xE000 && key <= 0xF8FF)
+                && Character.isValidCodePoint(key)) {
             next = current + new String(Character.toChars(key));
         } else {
             return;
