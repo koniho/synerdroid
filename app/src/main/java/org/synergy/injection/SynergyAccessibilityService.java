@@ -48,22 +48,21 @@ public final class SynergyAccessibilityService extends AccessibilityService {
 
     public void movePointer(int x, int y) {
         mainHandler.post(() -> {
-            if (cursorView == null || cursorParams == null) return;
-            cursorParams.x = x;
-            cursorParams.y = y - getOverlayTopInset();
+            if (cursorView == null) return;
             cursorView.setVisibility(android.view.View.VISIBLE);
-            windowManager.updateViewLayout(cursorView, cursorParams);
+            cursorView.setPointerPosition(x, y);
         });
     }
 
     private void createCursorOverlay() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         cursorView = new CursorOverlayView(this);
-        int size = Math.round(36 * getResources().getDisplayMetrics().density);
         cursorParams = new WindowManager.LayoutParams(
-                size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
         cursorParams.gravity = Gravity.TOP | Gravity.START;

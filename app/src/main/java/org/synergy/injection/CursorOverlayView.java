@@ -2,46 +2,36 @@ package org.synergy.injection;
 
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.view.View;
 
-/** Lightweight pointer rendered in an accessibility overlay. */
+/** A translucent dot whose center is the exact accessibility gesture coordinate. */
 final class CursorOverlayView extends View {
-    private final Paint shadow = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path pointer = new Path();
+    private final Paint halo = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final float radius;
+    private float pointerX;
+    private float pointerY;
 
     CursorOverlayView(Context context) {
         super(context);
         float density = getResources().getDisplayMetrics().density;
-        pointer.moveTo(2f * density, 1f * density);
-        pointer.lineTo(2f * density, 25f * density);
-        pointer.lineTo(8f * density, 19f * density);
-        pointer.lineTo(13f * density, 29f * density);
-        pointer.lineTo(18f * density, 26f * density);
-        pointer.lineTo(13f * density, 17f * density);
-        pointer.lineTo(22f * density, 17f * density);
-        pointer.close();
+        radius = 9f * density;
+        halo.setColor(0x55000000);
+        dot.setColor(0x99FFFFFF);
+    }
 
-        shadow.setColor(0x66000000);
-        shadow.setStyle(Paint.Style.STROKE);
-        shadow.setStrokeWidth(4f * density);
-        shadow.setStrokeJoin(Paint.Join.ROUND);
-        fill.setColor(Color.WHITE);
-        fill.setStyle(Paint.Style.FILL);
-        outline.setColor(Color.BLACK);
-        outline.setStyle(Paint.Style.STROKE);
-        outline.setStrokeWidth(1.5f * density);
-        outline.setStrokeJoin(Paint.Join.ROUND);
+    void setPointerPosition(float globalX, float globalY) {
+        int[] windowOrigin = new int[2];
+        getLocationOnScreen(windowOrigin);
+        pointerX = globalX - windowOrigin[0];
+        pointerY = globalY - windowOrigin[1];
+        invalidate();
     }
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawPath(pointer, shadow);
-        canvas.drawPath(pointer, fill);
-        canvas.drawPath(pointer, outline);
+        canvas.drawCircle(pointerX, pointerY, radius + 2f, halo);
+        canvas.drawCircle(pointerX, pointerY, radius, dot);
     }
 }
