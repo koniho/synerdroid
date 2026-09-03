@@ -206,13 +206,13 @@ public class EventQueue implements EventQueueInterface {
     /**
      * Remove all handlers for a target
      */
-    public void removeHandlers (Object target) {
+    public synchronized void removeHandlers (Object target) {
         handlers.remove (target);
     }
 
 
     
-    public EventJobInterface getHandler (EventType type, Object target) {
+    public synchronized EventJobInterface getHandler (EventType type, Object target) {
         if (handlers.containsKey (target)) {
         	if (handlers.get(target).containsKey (type)) {
         		return handlers.get (target).get (type);

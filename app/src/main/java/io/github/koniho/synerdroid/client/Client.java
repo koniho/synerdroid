@@ -49,6 +49,7 @@ import android.widget.Toast;
 
 public class Client implements EventTarget {
 	public interface StatusListener { void onStatus(String message); }
+	public interface DisconnectedListener { void onDisconnected(Client client); }
 	
 	private final Context context;
 	private String name;
@@ -65,11 +66,11 @@ public class Client implements EventTarget {
 	
 	private ServerProxy server;
 	private final StatusListener statusListener;
-    private final Runnable disconnectedListener;
+    private final DisconnectedListener disconnectedListener;
 
 	public Client (final Context context, final String name, final NetworkAddress serverAddress,
 			SocketFactoryInterface socketFactory, StreamFilterFactoryInterface streamFilterFactory,
-			ScreenInterface screen, StatusListener statusListener, Runnable disconnectedListener) {
+			ScreenInterface screen, StatusListener statusListener, DisconnectedListener disconnectedListener) {
 		
 		this.context = context;
 		this.name = name;
@@ -137,18 +138,29 @@ public class Client implements EventTarget {
 		}
 	}
 	
-	public synchronized void disconnect (String msg) {
-        if (disconnected) return;
-        disconnected = true;
+	public void disconnect (String msg) {
+        synchronized (this) {
+            if (disconnected) return;
+            disconnected = true;
+        }
         reportStatus(msg == null ? "Disconnected." : "Disconnected: " + msg);
-        cleanupTimer();
-        cleanupScreen();
-        if (stream != null) EventQueue.getInstance().removeHandlers(stream.getEventTarget());
-        if (socket != null) socket.close();
-        socket = null;
-        stream = null;
-        Injection.stop();
-        if (disconnectedListener != null) disconnectedListener.run();
+        try {
+            cleanupTimer();
+            cleanupScreen();
+            Stream oldStream = stream;
+            if (oldStream != null) {
+                EventQueue.getInstance().removeHandlers(oldStream.getEventTarget());
+            }
+            DataSocketInterface oldSocket = socket;
+            socket = null;
+            stream = null;
+            if (oldSocket != null) oldSocket.close();
+        } catch (Throwable error) {
+            reportStatus("Disconnect cleanup warning: " + deepestMessage(error));
+        } finally {
+            Injection.stop();
+            if (disconnectedListener != null) disconnectedListener.onDisconnected(this);
+        }
     }
 
     public boolean isDisconnected() { return disconnected; }
@@ -212,7 +224,7 @@ public class Client implements EventTarget {
     }
     
     private void handleDisconnected () {
-    	// TODO
+        disconnect(null);
     }
 
     private void handleHello () {

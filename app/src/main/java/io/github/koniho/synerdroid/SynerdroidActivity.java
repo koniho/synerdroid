@@ -46,7 +46,6 @@ public class SynerdroidActivity extends Activity {
     private Thread mainLoopThread;
     private TextView statusView;
     private Button connectButton;
-    private Button disconnectButton;
     private volatile Client currentClient;
 
     private final class MainLoopThread extends Thread {
@@ -79,8 +78,6 @@ public class SynerdroidActivity extends Activity {
             statusView.append("\n\nPREVIOUS CRASH\n" + previousCrash);
         }
         connectButton = findViewById(R.id.connectButton);
-        disconnectButton = findViewById(R.id.disconnectButton);
-        disconnectButton.setEnabled(false);
 
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         setTextIfPresent(R.id.clientNameEditText,
@@ -112,8 +109,10 @@ public class SynerdroidActivity extends Activity {
         findViewById(R.id.accessibilityButton).setOnClickListener(view ->
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         findViewById(R.id.keyboardButton).setOnClickListener(view -> configureKeyboard());
-        connectButton.setOnClickListener(view -> connect());
-        disconnectButton.setOnClickListener(view -> disconnect());
+        connectButton.setOnClickListener(view -> {
+            if (currentClient == null) connect();
+            else disconnect();
+        });
         Log.setLogLevel(Log.Level.INFO);
     }
 
@@ -235,7 +234,7 @@ public class SynerdroidActivity extends Activity {
             Client client = new Client(getApplicationContext(), clientName, serverAddress,
                     socketFactory, null, screen, this::appendStatus, this::onDisconnected);
             currentClient = client;
-            disconnectButton.setEnabled(true);
+            setConnectionState(true);
             new SynergyConnectTask().execute(client);
 
             if (mainLoopThread == null) {
@@ -250,15 +249,23 @@ public class SynerdroidActivity extends Activity {
 
     private void disconnect() {
         Client client = currentClient;
-        if (client != null) client.disconnect(null);
+        if (client == null) return;
+        connectButton.setEnabled(false);
+        appendStatus("Disconnecting…");
+        new Thread(() -> client.disconnect(null), "Synerdroid disconnect").start();
     }
 
-    private void onDisconnected() {
+    private void onDisconnected(Client client) {
         runOnUiThread(() -> {
+            if (currentClient != client) return;
             currentClient = null;
-            connectButton.setEnabled(true);
-            disconnectButton.setEnabled(false);
+            setConnectionState(false);
         });
+    }
+
+    private void setConnectionState(boolean connected) {
+        connectButton.setText(connected ? R.string.disconnect : R.string.connect);
+        connectButton.setEnabled(true);
     }
 
     private void saveSettings() {
