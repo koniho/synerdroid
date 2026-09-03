@@ -96,6 +96,14 @@ public final class SynergyAccessibilityService extends AccessibilityService {
         mainHandler.post(() -> gesture(startX, startY, endX, endY, 450));
     }
 
+    public void showRecents() {
+        mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_RECENTS));
+    }
+
+    public void showNotifications() {
+        mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS));
+    }
+
     public void goBack() {
         mainHandler.post(() -> performGlobalAction(GLOBAL_ACTION_BACK));
     }

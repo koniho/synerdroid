@@ -26,9 +26,23 @@ public final class Injection {
     public static void stop() { }
 
     public static void keydown(int key, int mask) {
-        if (SynergyInputMethodService.sendKey(key)) return;
         SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
+        boolean alt = (mask & 0x0004) != 0;
+        boolean shift = (mask & 0x0001) != 0;
+        if (service != null && alt && isTab(key)) {
+            service.showRecents();
+            return;
+        }
+        if (service != null && alt && shift && (key == 78 || key == 110)) {
+            service.showNotifications();
+            return;
+        }
+        if (SynergyInputMethodService.sendKey(key)) return;
         if (service != null) service.keyDown(key, mask);
+    }
+
+    private static boolean isTab(int key) {
+        return key == 9 || key == 61193 || key == 65289;
     }
 
     public static void keyup(int key, int mask) { }
@@ -57,8 +71,14 @@ public final class Injection {
         SynergyAccessibilityService service = SynergyAccessibilityService.getInstance();
         if (service != null && pressedButton == buttonId) {
             int distance = Math.abs(pointerX - pressX) + Math.abs(pointerY - pressY);
-            if (distance > 12) service.drag(pressX, pressY, pointerX, pointerY);
-            else service.click(pointerX, pointerY, buttonId);
+            if (pressY <= Math.round(48 * service.getResources().getDisplayMetrics().density)
+                    && pointerY - pressY > 60) {
+                service.showNotifications();
+            } else if (distance > 12) {
+                service.drag(pressX, pressY, pointerX, pointerY);
+            } else {
+                service.click(pointerX, pointerY, buttonId);
+            }
         }
         pressedButton = -1;
     }
