@@ -3,6 +3,7 @@ package io.github.koniho.synerdroid.injection;
 
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.InsetDrawable;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.os.Looper;
@@ -114,7 +115,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setClipChildren(false);
         row.setGravity(Gravity.CENTER);
-        row.setPadding(0, dp(2), 0, dp(2));
+        row.setPadding(0, 0, 0, 0);
         row.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(54)));
         return row;
@@ -134,20 +135,22 @@ public final class SynerdroidInputMethodService extends InputMethodService {
         GradientDrawable background = new GradientDrawable();
         background.setColor(special ? Color.rgb(47, 70, 82) : Color.rgb(40, 50, 56));
         background.setCornerRadius(dp(10));
-        button.setBackground(background);
+        button.setBackground(new InsetDrawable(background, dp(3), dp(2), dp(3), dp(2)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.MATCH_PARENT, weight);
-        params.setMargins(dp(3), 0, dp(3), 0);
+        params.setMargins(0, 0, 0, 0);
         button.setLayoutParams(params);
         button.setOnClickListener(listener);
         button.setHapticFeedbackEnabled(true);
         button.setOnTouchListener((view, event) -> {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                view.setTranslationZ(dp(16));
                 view.animate().scaleX(2f).scaleY(2f).setDuration(70).start();
             } else if (event.getActionMasked() == MotionEvent.ACTION_UP
                     || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-                view.animate().scaleX(1f).scaleY(1f).setDuration(110).start();
+                view.animate().scaleX(1f).scaleY(1f).translationZ(0f)
+                        .setDuration(110).start();
             }
             return false;
         });
@@ -280,9 +283,11 @@ public final class SynerdroidInputMethodService extends InputMethodService {
                 Button button = (Button) keyView;
                 if (!button.getText().toString().equalsIgnoreCase(wanted)) continue;
                 button.animate().cancel();
+                button.setTranslationZ(dp(16));
                 button.setScaleX(2f);
                 button.setScaleY(2f);
-                button.animate().scaleX(1f).scaleY(1f).setDuration(160).start();
+                button.animate().scaleX(1f).scaleY(1f).translationZ(0f)
+                        .setDuration(160).start();
                 return;
             }
         }
