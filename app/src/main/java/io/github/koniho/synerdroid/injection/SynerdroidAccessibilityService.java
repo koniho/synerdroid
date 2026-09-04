@@ -5,9 +5,12 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
+import android.hardware.display.DisplayManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -19,6 +22,8 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
     private WindowManager windowManager;
     private CursorOverlayView cursorView;
     private WindowManager.LayoutParams cursorParams;
+    private DisplayManager displayManager;
+    private Display activeDisplay;
 
     public static SynerdroidAccessibilityService getInstance() { return instance; }
     public static boolean isReady() { return instance != null; }
@@ -26,6 +31,8 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         instance = this;
+        displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        activeDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
         createCursorOverlay();
     }
 
@@ -40,11 +47,32 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
     @Override public void onInterrupt() { }
 
     public int getScreenWidth() {
-        return getResources().getDisplayMetrics().widthPixels;
+        return displayContext().getResources().getDisplayMetrics().widthPixels;
     }
 
     public int getScreenHeight() {
-        return getResources().getDisplayMetrics().heightPixels;
+        return displayContext().getResources().getDisplayMetrics().heightPixels;
+    }
+
+    public boolean switchDisplay(boolean forward) {
+        if (displayManager == null || activeDisplay == null) return false;
+        Display[] displays = displayManager.getDisplays();
+        int current = -1;
+        for (int i = 0; i < displays.length; i++) {
+            if (displays[i].getDisplayId() == activeDisplay.getDisplayId()) {
+                current = i;
+                break;
+            }
+        }
+        int next = current + (forward ? 1 : -1);
+        if (current < 0 || next < 0 || next >= displays.length) return false;
+        activeDisplay = displays[next];
+        mainHandler.post(this::createCursorOverlay);
+        return true;
+    }
+
+    private android.content.Context displayContext() {
+        return activeDisplay == null ? this : createDisplayContext(activeDisplay);
     }
 
     public void movePointer(int x, int y) {
@@ -62,8 +90,10 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
     }
 
     private void createCursorOverlay() {
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        cursorView = new CursorOverlayView(this);
+        removeCursorOverlay();
+        android.content.Context context = displayContext();
+        windowManager = (WindowManager) context.getSystemService(WINDOW_SERVICE);
+        cursorView = new CursorOverlayView(context);
         cursorParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -149,7 +179,11 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         if (startX != endX || startY != endY) path.lineTo(endX, endY);
         GestureDescription.StrokeDescription stroke =
                 new GestureDescription.StrokeDescription(path, 0, duration);
-        dispatchGesture(new GestureDescription.Builder().addStroke(stroke).build(), null, null);
+        GestureDescription.Builder builder = new GestureDescription.Builder().addStroke(stroke);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && activeDisplay != null) {
+            builder.setDisplayId(activeDisplay.getDisplayId());
+        }
+        dispatchGesture(builder.build(), null, null);
     }
 
     public void keyDown(int key, int mask) {

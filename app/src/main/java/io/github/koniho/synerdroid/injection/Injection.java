@@ -112,7 +112,17 @@ public final class Injection {
         int moveY = Math.round(scaledY);
         remainderX = scaledX - moveX;
         remainderY = scaledY - moveY;
-        pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, pointerX + moveX));
+        int oldWidth = service.getScreenWidth();
+        int oldHeight = service.getScreenHeight();
+        int nextX = pointerX + moveX;
+        if (nextX >= oldWidth && service.switchDisplay(true)) {
+            nextX -= oldWidth;
+            pointerY = scaleCoordinate(pointerY, oldHeight, service.getScreenHeight());
+        } else if (nextX < 0 && service.switchDisplay(false)) {
+            nextX += service.getScreenWidth();
+            pointerY = scaleCoordinate(pointerY, oldHeight, service.getScreenHeight());
+        }
+        pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, nextX));
         pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + moveY));
         if (screenFocused) service.movePointer(pointerX, pointerY);
     }
@@ -148,5 +158,10 @@ public final class Injection {
     public static void mousewheel(int x, int y) {
         SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
         if (service != null) service.scroll(pointerX, pointerY, invertScroll ? -y : y);
+    }
+
+    private static int scaleCoordinate(int value, int oldSize, int newSize) {
+        if (oldSize <= 1 || newSize <= 1) return 0;
+        return Math.round(value * (newSize - 1f) / (oldSize - 1f));
     }
 }
