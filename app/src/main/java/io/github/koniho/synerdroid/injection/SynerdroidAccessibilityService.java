@@ -68,9 +68,12 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
                     Math.max(0, Math.min(getScreenHeight() - 1, y + dy))
             };
         }
-        float currentDensity = displayContext().getResources().getDisplayMetrics().density;
-        float globalX = currentBounds.left + (x + dx) / currentDensity;
-        float globalY = currentBounds.top + (y + dy) / currentDensity;
+        int currentWidth = getScreenWidth();
+        int currentHeight = getScreenHeight();
+        float globalX = currentBounds.left
+                + (x + dx) * currentBounds.width() / currentWidth;
+        float globalY = currentBounds.top
+                + (y + dy) * currentBounds.height() / currentHeight;
         SparseArray<RectF> topology = topologyBounds();
         for (int i = 0; i < topology.size(); i++) {
             RectF bounds = topology.valueAt(i);
@@ -78,12 +81,13 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
             Display destination = displayManager.getDisplay(topology.keyAt(i));
             if (destination == null || destination.getState() == Display.STATE_OFF) continue;
             if (destination.getDisplayId() != getActiveDisplayId()) activateDisplay(destination);
-            float density = displayContext().getResources().getDisplayMetrics().density;
             return new int[] {
                     Math.max(0, Math.min(getScreenWidth() - 1,
-                            Math.round((globalX - bounds.left) * density))),
+                            Math.round((globalX - bounds.left)
+                                    * getScreenWidth() / bounds.width()))),
                     Math.max(0, Math.min(getScreenHeight() - 1,
-                            Math.round((globalY - bounds.top) * density)))
+                            Math.round((globalY - bounds.top)
+                                    * getScreenHeight() / bounds.height())))
             };
         }
         return new int[] {
