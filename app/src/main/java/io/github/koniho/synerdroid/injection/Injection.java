@@ -119,6 +119,21 @@ public final class Injection {
         if (screenFocused) service.movePointer(pointerX, pointerY);
     }
 
+    public static void moveMouseAbsolute(int x, int y) {
+        SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
+        if (service == null) return;
+        int[] destination = service.moveToDesktopPosition(x, y);
+        pointerX = destination[0];
+        pointerY = destination[1];
+        remainderX = remainderY = 0f;
+        if (screenFocused) service.movePointer(pointerX, pointerY);
+    }
+
+    public static int[] getDesktopSize() {
+        SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
+        return service == null ? new int[] { 1, 1 } : service.getDesktopSize();
+    }
+
     public static void mousedown(int buttonId) {
         if (buttonId == 3 || buttonId == 4 || buttonId == 8) {
             SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();

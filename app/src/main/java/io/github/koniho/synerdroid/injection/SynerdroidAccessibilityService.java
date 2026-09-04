@@ -60,6 +60,56 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         return activeDisplay == null ? Display.DEFAULT_DISPLAY : activeDisplay.getDisplayId();
     }
 
+    public int[] getDesktopSize() {
+        SparseArray<RectF> topology = topologyBounds();
+        if (topology.size() == 0) return new int[] { getScreenWidth(), getScreenHeight() };
+        float right = 0f;
+        float bottom = 0f;
+        for (int i = 0; i < topology.size(); i++) {
+            right = Math.max(right, topology.valueAt(i).right);
+            bottom = Math.max(bottom, topology.valueAt(i).bottom);
+        }
+        return new int[] { Math.max(1, (int) Math.ceil(right)),
+                Math.max(1, (int) Math.ceil(bottom)) };
+    }
+
+    public synchronized int[] moveToDesktopPosition(int globalX, int globalY) {
+        SparseArray<RectF> topology = topologyBounds();
+        if (topology.size() == 0) {
+            return new int[] {
+                    Math.max(0, Math.min(getScreenWidth() - 1, globalX)),
+                    Math.max(0, Math.min(getScreenHeight() - 1, globalY))
+            };
+        }
+        int bestIndex = -1;
+        float bestX = 0f;
+        float bestY = 0f;
+        float bestDistance = Float.MAX_VALUE;
+        for (int i = 0; i < topology.size(); i++) {
+            RectF bounds = topology.valueAt(i);
+            float candidateX = Math.max(bounds.left,
+                    Math.min(Math.nextDown(bounds.right), globalX));
+            float candidateY = Math.max(bounds.top,
+                    Math.min(Math.nextDown(bounds.bottom), globalY));
+            float dx = globalX - candidateX;
+            float dy = globalY - candidateY;
+            float distance = dx * dx + dy * dy;
+            if (distance < bestDistance) {
+                bestIndex = i;
+                bestX = candidateX;
+                bestY = candidateY;
+                bestDistance = distance;
+            }
+        }
+        if (bestIndex < 0) return new int[] { 0, 0 };
+        RectF bounds = topology.valueAt(bestIndex);
+        Display destination = displayManager.getDisplay(topology.keyAt(bestIndex));
+        if (destination != null && destination.getDisplayId() != getActiveDisplayId()) {
+            activateDisplay(destination);
+        }
+        return localCoordinates(bestX, bestY, bounds);
+    }
+
     public synchronized int[] moveAcrossDisplays(int x, int y, int dx, int dy) {
         RectF currentBounds = topologyBounds(getActiveDisplayId());
         if (currentBounds == null) {
@@ -71,9 +121,9 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         int currentWidth = getScreenWidth();
         int currentHeight = getScreenHeight();
         float globalX = currentBounds.left
-                + (x + dx) * currentBounds.width() / currentWidth;
+                + x * currentBounds.width() / currentWidth + dx;
         float globalY = currentBounds.top
-                + (y + dy) * currentBounds.height() / currentHeight;
+                + y * currentBounds.height() / currentHeight + dy;
         SparseArray<RectF> topology = topologyBounds();
         for (int i = 0; i < topology.size(); i++) {
             RectF bounds = topology.valueAt(i);
@@ -81,18 +131,22 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
             Display destination = displayManager.getDisplay(topology.keyAt(i));
             if (destination == null || destination.getState() == Display.STATE_OFF) continue;
             if (destination.getDisplayId() != getActiveDisplayId()) activateDisplay(destination);
-            return new int[] {
-                    Math.max(0, Math.min(getScreenWidth() - 1,
-                            Math.round((globalX - bounds.left)
-                                    * getScreenWidth() / bounds.width()))),
-                    Math.max(0, Math.min(getScreenHeight() - 1,
-                            Math.round((globalY - bounds.top)
-                                    * getScreenHeight() / bounds.height())))
-            };
+            return localCoordinates(globalX, globalY, bounds);
         }
         return new int[] {
                 Math.max(0, Math.min(getScreenWidth() - 1, x + dx)),
                 Math.max(0, Math.min(getScreenHeight() - 1, y + dy))
+        };
+    }
+
+    private int[] localCoordinates(float globalX, float globalY, RectF bounds) {
+        return new int[] {
+                Math.max(0, Math.min(getScreenWidth() - 1,
+                        Math.round((globalX - bounds.left)
+                                * getScreenWidth() / bounds.width()))),
+                Math.max(0, Math.min(getScreenHeight() - 1,
+                        Math.round((globalY - bounds.top)
+                                * getScreenHeight() / bounds.height())))
         };
     }
 

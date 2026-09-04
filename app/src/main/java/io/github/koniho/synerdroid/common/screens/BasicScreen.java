@@ -147,19 +147,9 @@ public class BasicScreen implements ScreenInterface {
         	return;
         }
         
-        if (mouseX < 0 || mouseY < 0) {
-        	Injection.movemouse (-width, -height);
-        	Injection.movemouse(x, y);
-        	mouseX = x;
-        	mouseY = y;
-        } else {
-	        int dx = x - mouseX;
-	    	int dy = y - mouseY; 
-		  	Injection.movemouse (dx, dy);
-	    	// Adjust 'known' cursor position
-	        mouseX += dx;
-	        mouseY += dy;
-        }
+        Injection.moveMouseAbsolute(x, y);
+        mouseX = x;
+        mouseY = y;
 	}
 	
 	@Override
@@ -175,10 +165,6 @@ public class BasicScreen implements ScreenInterface {
 	private void clearMousePosition(boolean inject) {
 		mouseX = -1; 
 	    mouseY = -1;
-	    if (inject) {
-	    	// moving to height/width will hide mouse pointer
-	    	Injection.movemouse(width, height);
-	    }
 	}
 
 	@Override

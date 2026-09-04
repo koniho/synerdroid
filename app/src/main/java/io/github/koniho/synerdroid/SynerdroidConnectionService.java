@@ -118,8 +118,9 @@ public final class SynerdroidConnectionService extends Service {
         try {
             SocketFactoryInterface factory = new TCPSocketFactory(tls, fingerprint);
             BasicScreen screen = new BasicScreen();
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            screen.setShape(metrics.widthPixels, metrics.heightPixels);
+            int[] desktopSize = Injection.getDesktopSize();
+            screen.setShape(desktopSize[0], desktopSize[1]);
+            report("Android display topology: " + desktopSize[0] + " x " + desktopSize[1] + ".");
             Client next = new Client(getApplicationContext(), name,
                     new NetworkAddress(host, port), factory, null, screen,
                     this::report, disconnected -> onClientDisconnected(disconnected, expectedGeneration));
