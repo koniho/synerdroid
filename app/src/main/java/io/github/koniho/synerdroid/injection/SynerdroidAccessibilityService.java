@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
+import android.graphics.RectF;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.view.Gravity;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.util.SparseArray;
 
 public final class SynerdroidAccessibilityService extends AccessibilityService {
     private static volatile SynerdroidAccessibilityService instance;
@@ -54,36 +56,64 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         return displayContext().getResources().getDisplayMetrics().heightPixels;
     }
 
-    public boolean isOnDefaultDisplay() {
-        return activeDisplay == null || activeDisplay.getDisplayId() == Display.DEFAULT_DISPLAY;
-    }
-
     public int getActiveDisplayId() {
         return activeDisplay == null ? Display.DEFAULT_DISPLAY : activeDisplay.getDisplayId();
     }
 
-    public boolean switchToExternalDisplay() {
-        if (displayManager == null || activeDisplay == null) return false;
-        Display[] displays = displayManager.getDisplays();
-        for (Display display : displays) {
-            if (display.getDisplayId() != Display.DEFAULT_DISPLAY
-                    && display.getState() != Display.STATE_OFF) {
-                return activateDisplay(display);
-            }
+    public synchronized int[] moveAcrossDisplays(int x, int y, int dx, int dy) {
+        RectF currentBounds = topologyBounds(getActiveDisplayId());
+        if (currentBounds == null) {
+            return new int[] {
+                    Math.max(0, Math.min(getScreenWidth() - 1, x + dx)),
+                    Math.max(0, Math.min(getScreenHeight() - 1, y + dy))
+            };
         }
-        return false;
+        float currentDensity = displayContext().getResources().getDisplayMetrics().density;
+        float globalX = currentBounds.left + (x + dx) / currentDensity;
+        float globalY = currentBounds.top + (y + dy) / currentDensity;
+        SparseArray<RectF> topology = topologyBounds();
+        for (int i = 0; i < topology.size(); i++) {
+            RectF bounds = topology.valueAt(i);
+            if (!bounds.contains(globalX, globalY)) continue;
+            Display destination = displayManager.getDisplay(topology.keyAt(i));
+            if (destination == null || destination.getState() == Display.STATE_OFF) continue;
+            if (destination.getDisplayId() != getActiveDisplayId()) activateDisplay(destination);
+            float density = displayContext().getResources().getDisplayMetrics().density;
+            return new int[] {
+                    Math.max(0, Math.min(getScreenWidth() - 1,
+                            Math.round((globalX - bounds.left) * density))),
+                    Math.max(0, Math.min(getScreenHeight() - 1,
+                            Math.round((globalY - bounds.top) * density)))
+            };
+        }
+        return new int[] {
+                Math.max(0, Math.min(getScreenWidth() - 1, x + dx)),
+                Math.max(0, Math.min(getScreenHeight() - 1, y + dy))
+        };
     }
 
-    public boolean switchToDefaultDisplay() {
-        if (displayManager == null || isOnDefaultDisplay()) return false;
-        Display display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
-        return display != null && activateDisplay(display);
+    @SuppressWarnings("unchecked")
+    private SparseArray<RectF> topologyBounds() {
+        if (displayManager == null || Build.VERSION.SDK_INT < 36) return new SparseArray<>();
+        try {
+            Object topology = DisplayManager.class.getMethod("getDisplayTopology")
+                    .invoke(displayManager);
+            if (topology == null) return new SparseArray<>();
+            return (SparseArray<RectF>) topology.getClass().getMethod("getAbsoluteBounds")
+                    .invoke(topology);
+        } catch (ReflectiveOperationException | ClassCastException error) {
+            return new SparseArray<>();
+        }
     }
 
-    private boolean activateDisplay(Display display) {
+    private RectF topologyBounds(int displayId) {
+        SparseArray<RectF> bounds = topologyBounds();
+        return bounds.get(displayId);
+    }
+
+    private void activateDisplay(Display display) {
         activeDisplay = display;
         mainHandler.post(this::createCursorOverlay);
-        return true;
     }
 
     private android.content.Context displayContext() {

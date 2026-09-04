@@ -106,18 +106,6 @@
             android:layout_marginTop="8dp"
             android:text="@string/invert_scroll" />
 
-        <TextView
-            style="@style/Synerdroid.FieldLabel"
-            android:text="@string/external_display_position" />
-
-        <Spinner
-            android:id="@+id/externalDisplayPositionSpinner"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/edit_text_background"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
-
         <Button
             android:id="@+id/accessibilityButton"
             style="@style/Synerdroid.SecondaryButton"

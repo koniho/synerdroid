@@ -14,8 +14,6 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.SeekBar;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 import android.widget.Toast;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -46,7 +44,6 @@ public class SynerdroidActivity extends Activity {
     private static final String PROP_TLS_FINGERPRINT = "tlsFingerprint";
     private static final String PROP_POINTER_SPEED = "pointerSpeed";
     private static final String PROP_INVERT_SCROLL = "invertScroll";
-    private static final String PROP_EXTERNAL_DISPLAY_POSITION = "externalDisplayPosition";
 
     private TextView statusView;
     private Button connectButton;
@@ -94,21 +91,6 @@ public class SynerdroidActivity extends Activity {
         CheckBox invertScroll = findViewById(R.id.invertScrollCheckBox);
         invertScroll.setChecked(preferences.getBoolean(PROP_INVERT_SCROLL, false));
         Injection.setInvertScroll(invertScroll.isChecked());
-        Spinner displayPosition = findViewById(R.id.externalDisplayPositionSpinner);
-        ArrayAdapter<CharSequence> displayPositions = ArrayAdapter.createFromResource(this,
-                R.array.external_display_positions, android.R.layout.simple_spinner_item);
-        displayPositions.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        displayPosition.setAdapter(displayPositions);
-        displayPosition.setSelection(preferences.getInt(PROP_EXTERNAL_DISPLAY_POSITION, 0));
-        Injection.setExternalDisplayPosition(displayPosition.getSelectedItemPosition());
-        displayPosition.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view,
-                    int position, long id) {
-                Injection.setExternalDisplayPosition(position);
-                saveSettings();
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
-        });
         invertScroll.setOnCheckedChangeListener((button, checked) -> {
             Injection.setInvertScroll(checked);
             saveSettings();
@@ -269,8 +251,6 @@ public class SynerdroidActivity extends Activity {
                 .putString(PROP_TLS_FINGERPRINT, textOf(R.id.tlsFingerprintEditText))
                 .putInt(PROP_POINTER_SPEED, ((SeekBar) findViewById(R.id.pointerSpeedSeekBar)).getProgress())
                 .putBoolean(PROP_INVERT_SCROLL, ((CheckBox) findViewById(R.id.invertScrollCheckBox)).isChecked())
-                .putInt(PROP_EXTERNAL_DISPLAY_POSITION,
-                        ((Spinner) findViewById(R.id.externalDisplayPositionSpinner)).getSelectedItemPosition())
                 .apply();
     }
 
