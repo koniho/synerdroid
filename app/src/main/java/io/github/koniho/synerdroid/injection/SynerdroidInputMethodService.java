@@ -53,14 +53,27 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     @Override public void onDestroy() {
+        clearTransientKeyUi();
         if (instance == this) instance = null;
         super.onDestroy();
+    }
+
+    @Override public void onFinishInputView(boolean finishingInput) {
+        clearTransientKeyUi();
+        super.onFinishInputView(finishingInput);
+    }
+
+    @Override public void onWindowHidden() {
+        clearTransientKeyUi();
+        super.onWindowHidden();
     }
 
     @Override public View onCreateInputView() {
         keyboardView = new LinearLayout(this);
         keyboardView.setOrientation(LinearLayout.VERTICAL);
         keyboardView.setClipChildren(false);
+        keyboardView.setGravity(Gravity.BOTTOM);
+        keyboardView.setMinimumHeight(dp(340));
         keyboardView.setPadding(dp(4), dp(6), dp(4), dp(64));
         keyboardView.setBackgroundColor(Color.rgb(18, 26, 30));
         keyboardView.setOnTouchListener((view, event) -> forwardBelowSpacebar(event));
@@ -69,6 +82,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     private void buildKeyboard() {
+        clearTransientKeyUi();
         keyboardView.removeAllViews();
         if (symbols) {
             if (alternateSymbols) {
@@ -323,6 +337,7 @@ public final class SynerdroidInputMethodService extends InputMethodService {
     }
 
     private void showKeyPreview(Button anchor, String label) {
+        mainHandler.removeCallbacks(hidePreview);
         dismissKeyPreview();
         if (label.length() != 1) return;
         TextView preview = new TextView(this);
@@ -348,6 +363,15 @@ public final class SynerdroidInputMethodService extends InputMethodService {
             keyPreview.dismiss();
             keyPreview = null;
         }
+    }
+
+    private void clearTransientKeyUi() {
+        stopKeyRepeat();
+        mainHandler.removeCallbacks(hidePreview);
+        dismissKeyPreview();
+        for (ValueAnimator animator : keyHighlights.values()) animator.cancel();
+        keyHighlights.clear();
+        forwardedTouchKey = null;
     }
 
     private void toggleShift() {
