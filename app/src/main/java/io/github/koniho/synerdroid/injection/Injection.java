@@ -7,6 +7,7 @@ public final class Injection {
     private static int pointerY;
     private static int pressX;
     private static int pressY;
+    private static int pressDisplayId;
     private static int pressedButton = -1;
     private static boolean screenFocused;
     private static float pointerSpeed = 1.25f;
@@ -14,6 +15,11 @@ public final class Injection {
     private static float remainderY;
     private static boolean invertScroll;
     private static boolean switchingApps;
+    public static final int DISPLAY_RIGHT = 0;
+    public static final int DISPLAY_LEFT = 1;
+    public static final int DISPLAY_ABOVE = 2;
+    public static final int DISPLAY_BELOW = 3;
+    private static int externalDisplayPosition = DISPLAY_RIGHT;
 
     private Injection() { }
 
@@ -29,6 +35,10 @@ public final class Injection {
 
     public static void setPointerSpeed(float speed) {
         pointerSpeed = Math.max(0.5f, Math.min(2.0f, speed));
+    }
+
+    public static void setExternalDisplayPosition(int position) {
+        externalDisplayPosition = Math.max(DISPLAY_RIGHT, Math.min(DISPLAY_BELOW, position));
     }
 
     public static void startInjection(String ignoredDeviceName) {
@@ -115,15 +125,35 @@ public final class Injection {
         int oldWidth = service.getScreenWidth();
         int oldHeight = service.getScreenHeight();
         int nextX = pointerX + moveX;
-        if (nextX >= oldWidth && service.switchDisplay(true)) {
-            nextX -= oldWidth;
-            pointerY = scaleCoordinate(pointerY, oldHeight, service.getScreenHeight());
-        } else if (nextX < 0 && service.switchDisplay(false)) {
-            nextX += service.getScreenWidth();
-            pointerY = scaleCoordinate(pointerY, oldHeight, service.getScreenHeight());
+        int nextY = pointerY + moveY;
+        boolean phone = service.isOnDefaultDisplay();
+        boolean crossed = phone
+                ? crossesPhoneEdge(nextX, nextY, oldWidth, oldHeight)
+                : crossesExternalReturnEdge(nextX, nextY, oldWidth, oldHeight);
+        if (crossed) {
+            boolean switched = phone
+                    ? service.switchToExternalDisplay()
+                    : service.switchToDefaultDisplay();
+            if (switched) {
+                int newWidth = service.getScreenWidth();
+                int newHeight = service.getScreenHeight();
+                if (externalDisplayPosition == DISPLAY_RIGHT) {
+                    nextX = phone ? nextX - oldWidth : newWidth + nextX;
+                    nextY = scaleCoordinate(nextY, oldHeight, newHeight);
+                } else if (externalDisplayPosition == DISPLAY_LEFT) {
+                    nextX = phone ? newWidth + nextX : nextX - oldWidth;
+                    nextY = scaleCoordinate(nextY, oldHeight, newHeight);
+                } else if (externalDisplayPosition == DISPLAY_ABOVE) {
+                    nextY = phone ? newHeight + nextY : nextY - oldHeight;
+                    nextX = scaleCoordinate(nextX, oldWidth, newWidth);
+                } else {
+                    nextY = phone ? nextY - oldHeight : newHeight + nextY;
+                    nextX = scaleCoordinate(nextX, oldWidth, newWidth);
+                }
+            }
         }
         pointerX = Math.max(0, Math.min(service.getScreenWidth() - 1, nextX));
-        pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, pointerY + moveY));
+        pointerY = Math.max(0, Math.min(service.getScreenHeight() - 1, nextY));
         if (screenFocused) service.movePointer(pointerX, pointerY);
     }
 
@@ -136,12 +166,15 @@ public final class Injection {
         pressedButton = buttonId;
         pressX = pointerX;
         pressY = pointerY;
+        SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
+        pressDisplayId = service == null ? 0 : service.getActiveDisplayId();
     }
 
     public static void mouseup(int buttonId) {
         if (buttonId == 3 || buttonId == 4 || buttonId == 8) return;
         SynerdroidAccessibilityService service = SynerdroidAccessibilityService.getInstance();
-        if (service != null && pressedButton == buttonId) {
+        if (service != null && pressedButton == buttonId
+                && pressDisplayId == service.getActiveDisplayId()) {
             int distance = Math.abs(pointerX - pressX) + Math.abs(pointerY - pressY);
             if (pressY <= Math.round(48 * service.getResources().getDisplayMetrics().density)
                     && pointerY - pressY > 60) {
@@ -163,5 +196,19 @@ public final class Injection {
     private static int scaleCoordinate(int value, int oldSize, int newSize) {
         if (oldSize <= 1 || newSize <= 1) return 0;
         return Math.round(value * (newSize - 1f) / (oldSize - 1f));
+    }
+
+    private static boolean crossesPhoneEdge(int x, int y, int width, int height) {
+        if (externalDisplayPosition == DISPLAY_RIGHT) return x >= width;
+        if (externalDisplayPosition == DISPLAY_LEFT) return x < 0;
+        if (externalDisplayPosition == DISPLAY_ABOVE) return y < 0;
+        return y >= height;
+    }
+
+    private static boolean crossesExternalReturnEdge(int x, int y, int width, int height) {
+        if (externalDisplayPosition == DISPLAY_RIGHT) return x < 0;
+        if (externalDisplayPosition == DISPLAY_LEFT) return x >= width;
+        if (externalDisplayPosition == DISPLAY_ABOVE) return y >= height;
+        return y < 0;
     }
 }

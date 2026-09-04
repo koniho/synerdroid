@@ -22,4 +22,11 @@
     <string name="enable_accessibility">Accessibility settings</string>
     <string name="service_required">Enable the Synerdroid accessibility service before connecting.</string>
     <string name="invalid_fingerprint">Enter the server certificate SHA-256 fingerprint (64 hexadecimal digits).</string>
+    <string name="external_display_position">External display position</string>
+    <string-array name="external_display_positions">
+        <item>Right of phone</item>
+        <item>Left of phone</item>
+        <item>Above phone</item>
+        <item>Below phone</item>
+    </string-array>
 </resources>

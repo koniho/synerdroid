@@ -54,19 +54,34 @@ public final class SynerdroidAccessibilityService extends AccessibilityService {
         return displayContext().getResources().getDisplayMetrics().heightPixels;
     }
 
-    public boolean switchDisplay(boolean forward) {
+    public boolean isOnDefaultDisplay() {
+        return activeDisplay == null || activeDisplay.getDisplayId() == Display.DEFAULT_DISPLAY;
+    }
+
+    public int getActiveDisplayId() {
+        return activeDisplay == null ? Display.DEFAULT_DISPLAY : activeDisplay.getDisplayId();
+    }
+
+    public boolean switchToExternalDisplay() {
         if (displayManager == null || activeDisplay == null) return false;
         Display[] displays = displayManager.getDisplays();
-        int current = -1;
-        for (int i = 0; i < displays.length; i++) {
-            if (displays[i].getDisplayId() == activeDisplay.getDisplayId()) {
-                current = i;
-                break;
+        for (Display display : displays) {
+            if (display.getDisplayId() != Display.DEFAULT_DISPLAY
+                    && display.getState() != Display.STATE_OFF) {
+                return activateDisplay(display);
             }
         }
-        int next = current + (forward ? 1 : -1);
-        if (current < 0 || next < 0 || next >= displays.length) return false;
-        activeDisplay = displays[next];
+        return false;
+    }
+
+    public boolean switchToDefaultDisplay() {
+        if (displayManager == null || isOnDefaultDisplay()) return false;
+        Display display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        return display != null && activateDisplay(display);
+    }
+
+    private boolean activateDisplay(Display display) {
+        activeDisplay = display;
         mainHandler.post(this::createCursorOverlay);
         return true;
     }
