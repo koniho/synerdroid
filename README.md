@@ -25,7 +25,7 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Configure
 
-Enable **Synerdroid input control** in Android Accessibility settings. In Synerdroid, enter a client screen name present in the Synergy server configuration, the server hostname or IP, port 24800, and the SHA-256 fingerprint of the TLS-enabled server certificate.
+Enable **Synerdroid input control** in Android Accessibility settings. In Synerdroid, enter a client screen name present in the Synergy server configuration, the server hostname or IP, and port 24800. Tap **Fetch server certificate**, compare the displayed SHA-256 fingerprint with Synergy on the server, then tap **Trust and save**.
 
 Synergy 3's “add by IP” flow expects another full Synergy 3 installation. Until native pairing is implemented, add Synerdroid to the server's text configuration.
 

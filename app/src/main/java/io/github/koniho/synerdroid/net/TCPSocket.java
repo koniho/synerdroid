@@ -116,6 +116,46 @@ public class TCPSocket implements DataSocketInterface {
         }
     }
 
+    public static String fetchServerFingerprint(String host, int port) throws IOException {
+        try {
+            X509TrustManager probeTrustManager = new X509TrustManager() {
+                @Override public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+                @Override public void checkClientTrusted(X509Certificate[] chain, String authType)
+                        throws CertificateException {
+                    throw new CertificateException("Client certificates are not supported");
+                }
+                @Override public void checkServerTrusted(X509Certificate[] chain, String authType)
+                        throws CertificateException {
+                    if (chain == null || chain.length == 0) {
+                        throw new CertificateException("Server sent no TLS certificate");
+                    }
+                }
+            };
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, new TrustManager[] { probeTrustManager }, null);
+            try (Socket transport = new Socket()) {
+                transport.connect(new InetSocketAddress(host, port),
+                        SOCKET_CONNECTION_TIMEOUT_MILLIS);
+                transport.setSoTimeout(SOCKET_CONNECTION_TIMEOUT_MILLIS);
+                try (SSLSocket ssl = (SSLSocket) context.getSocketFactory()
+                        .createSocket(transport, host, port, true)) {
+                    ssl.setEnabledProtocols(new String[] { "TLSv1.3", "TLSv1.2" });
+                    ssl.startHandshake();
+                    java.security.cert.Certificate[] certificates =
+                            ssl.getSession().getPeerCertificates();
+                    if (certificates.length == 0 || !(certificates[0] instanceof X509Certificate)) {
+                        throw new IOException("Server sent no X.509 certificate");
+                    }
+                    return sha256((X509Certificate) certificates[0]);
+                }
+            }
+        } catch (GeneralSecurityException error) {
+            throw new IOException("Unable to inspect TLS certificate", error);
+        }
+    }
+
     public static String normalizeFingerprint(String fingerprint) {
         return fingerprint == null ? "" : fingerprint.replaceAll("(?i)sha256|[^0-9a-f]", "")
                 .toUpperCase(Locale.US);

@@ -22,4 +22,9 @@
     <string name="enable_accessibility">Accessibility settings</string>
     <string name="service_required">Enable the Synerdroid accessibility service before connecting.</string>
     <string name="invalid_fingerprint">Enter the server certificate SHA-256 fingerprint (64 hexadecimal digits).</string>
+    <string name="fetch_certificate">Fetch server certificate</string>
+    <string name="verify_certificate">Verify server certificate</string>
+    <string name="certificate_changed">Server certificate changed</string>
+    <string name="trust_certificate">Trust and save</string>
+    <string name="replace_certificate">Replace certificate</string>
 </resources>

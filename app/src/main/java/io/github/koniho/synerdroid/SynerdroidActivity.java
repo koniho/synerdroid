@@ -3,6 +3,7 @@ package io.github.koniho.synerdroid;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
@@ -36,6 +37,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SynerdroidActivity extends Activity {
     private static final String PROP_CLIENT_NAME = "clientName";
@@ -47,7 +50,9 @@ public class SynerdroidActivity extends Activity {
 
     private TextView statusView;
     private Button connectButton;
+    private Button fetchCertificateButton;
     private volatile boolean connectionActive;
+    private final ExecutorService certificateExecutor = Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +71,7 @@ public class SynerdroidActivity extends Activity {
             statusView.append("\n\nPREVIOUS CRASH\n" + previousCrash);
         }
         connectButton = findViewById(R.id.connectButton);
+        fetchCertificateButton = findViewById(R.id.fetchCertificateButton);
         SynerdroidConnectionService.setListener(new SynerdroidConnectionService.Listener() {
             @Override public void onStatus(String message) { appendStatus(message); }
             @Override public void onConnectionState(boolean active) {
@@ -106,6 +112,7 @@ public class SynerdroidActivity extends Activity {
         findViewById(R.id.accessibilityButton).setOnClickListener(view ->
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         findViewById(R.id.keyboardButton).setOnClickListener(view -> configureKeyboard());
+        fetchCertificateButton.setOnClickListener(view -> fetchCertificate());
         connectButton.setOnClickListener(view -> {
             if (!connectionActive) connect();
             else disconnect();
@@ -150,6 +157,65 @@ public class SynerdroidActivity extends Activity {
             appendStatus("Enable Synerdroid Keyboard, return here, then tap Keyboard settings again to select it.");
             startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS));
         }
+    }
+
+    private void fetchCertificate() {
+        clearInputFocus();
+        String host = textOf(R.id.serverHostEditText);
+        if (TextUtils.isEmpty(host)) {
+            appendStatus("Enter the server address before fetching its certificate.");
+            return;
+        }
+        final int port;
+        try {
+            port = Integer.parseInt(textOf(R.id.serverPortEditText));
+            if (port < 1 || port > 65535) throw new NumberFormatException();
+        } catch (NumberFormatException error) {
+            appendStatus("Port must be a number from 1 to 65535.");
+            return;
+        }
+        fetchCertificateButton.setEnabled(false);
+        appendStatus("Fetching TLS certificate from " + host + ":" + port + "...");
+        certificateExecutor.execute(() -> {
+            try {
+                String fingerprint = TCPSocket.fetchServerFingerprint(host, port);
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        confirmCertificate(host, port, fingerprint);
+                    }
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    fetchCertificateButton.setEnabled(true);
+                    appendStatus("Certificate fetch failed: " + error.getMessage());
+                });
+            }
+        });
+    }
+
+    private void confirmCertificate(String host, int port, String fingerprint) {
+        fetchCertificateButton.setEnabled(true);
+        String saved = TCPSocket.normalizeFingerprint(textOf(R.id.tlsFingerprintEditText));
+        boolean changed = saved.length() == 64 && !saved.equals(fingerprint);
+        String message = host + ":" + port + "\n\n"
+                + TCPSocket.formatFingerprint(fingerprint) + "\n\n"
+                + (changed
+                ? "WARNING: This differs from the saved certificate. Verify the change on the server before replacing it."
+                : "Compare this SHA-256 fingerprint with the fingerprint shown by Synergy on the server.");
+        new AlertDialog.Builder(this)
+                .setTitle(changed ? R.string.certificate_changed : R.string.verify_certificate)
+                .setMessage(message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(changed ? R.string.replace_certificate : R.string.trust_certificate,
+                        (dialog, which) -> {
+                            ((EditText) findViewById(R.id.tlsFingerprintEditText))
+                                    .setText(TCPSocket.formatFingerprint(fingerprint));
+                            ((CheckBox) findViewById(R.id.tlsCheckBox)).setChecked(true);
+                            saveSettings();
+                            appendStatus("TLS certificate trusted and saved.");
+                        })
+                .show();
     }
 
     private void migrateLegacyPreferences() {
@@ -239,6 +305,7 @@ public class SynerdroidActivity extends Activity {
 
     @Override protected void onDestroy() {
         SynerdroidConnectionService.setListener(null);
+        certificateExecutor.shutdownNow();
         super.onDestroy();
     }
 
